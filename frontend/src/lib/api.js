@@ -1,12 +1,6 @@
-import axios from "axios";
+import { apiClient } from "./config";
 
-const API_URL = "http://localhost:3000/api";
-
-// Create axios instance with credentials
-const axiosInstance = axios.create({
-  baseURL: API_URL,
-  withCredentials: true,
-});
+const axiosInstance = apiClient;
 
 // Get Stream Chat token
 export const getStreamToken = async () => {

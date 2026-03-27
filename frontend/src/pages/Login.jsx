@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
 import { toast } from 'react-toastify'
 import '../style/Login.css'
 import gmailIcon from '../assets/gmail.png'
 import passwordIcon from '../assets/password.png'
 import pic from '../assets/pic.png'
 import { useStore } from '../zustnd/store'
+import { apiClient } from '../lib/config'
 
 function Login() {
   const { setUser } = useStore()
@@ -25,12 +25,12 @@ function Login() {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const res = await axios.post('http://localhost:3000/api/auth/login', formData, { withCredentials: true })
+      const res = await apiClient.post('/auth/login', formData)
       
       // Check if login was successful
       if (res.status === 200 && (res.data?.validate === true || res.data?.message?.includes('success'))) {
         // Fetch user data
-        const userRes = await axios.get('http://localhost:3000/api/auth/user', { withCredentials: true })
+        const userRes = await apiClient.get('/auth/user')
         if (userRes.data?.validate) {
           console.log('Fetched user data:', userRes.data.user)
           setUser(userRes.data.user)

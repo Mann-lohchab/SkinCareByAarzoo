@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
 import { toast } from 'react-toastify'
 import '../style/Login.css' // reuse login css for similar design
 import pic from '../assets/pic.png'
+import { apiClient } from '../lib/config'
 
 function Otp() {
   const [otp, setOtp] = useState('')
@@ -22,7 +22,7 @@ function Otp() {
   const handleVerify = async (e) => {
     e.preventDefault()
     try {
-      const res = await axios.post('http://localhost:3000/api/auth/otp', { otp }, { withCredentials: true })
+      const res = await apiClient.post('/auth/otp', { otp })
       if (res.data.validate) {
         toast.success('Registration successful! Please login.')
         navigate('/login')
@@ -41,7 +41,7 @@ function Otp() {
       return
     }
     try {
-      const res = await axios.post('http://localhost:3000/api/auth/resend-otp', {}, { withCredentials: true })
+      const res = await apiClient.post('/auth/resend-otp', {})
       if (res.data.validate) {
         toast.success('OTP resent successfully.')
         setTimer(120) // reset timer

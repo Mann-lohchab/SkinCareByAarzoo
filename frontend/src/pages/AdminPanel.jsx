@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
 import { toast } from 'react-toastify'
 import '../style/Dashboard.css'
 import { useStore } from '../zustnd/store'
 import { Navbar } from '../components/Navbar'
 import { connectRealtime } from '../lib/realtime'
+import { apiClient } from '../lib/config'
 
 function AdminPanel() {
   const { user, setUser } = useStore()
@@ -27,12 +27,12 @@ function AdminPanel() {
     try {
       setLoading(true)
       if (activeTab === 'bookings') {
-        const res = await axios.get('http://localhost:3000/api/auth/video-call/all-bookings', { withCredentials: true })
+        const res = await apiClient.get('/auth/video-call/all-bookings')
         if (res.data.validate) {
           setBookings(res.data.bookings)
         }
       } else if (activeTab === 'users') {
-        const res = await axios.get('http://localhost:3000/api/auth/admin/users', { withCredentials: true })
+        const res = await apiClient.get('/auth/admin/users')
         if (res.data.validate) {
           setUsers(res.data.users)
         }
@@ -79,7 +79,7 @@ function AdminPanel() {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true })
+      await apiClient.post('/auth/logout', {})
       setUser(null)
       toast.success('Logged out successfully!')
       navigate('/login')
@@ -90,10 +90,7 @@ function AdminPanel() {
 
   const updateBookingStatus = async (bookingId, status) => {
     try {
-      const res = await axios.put('http://localhost:3000/api/auth/video-call/update-status', 
-        { bookingId, status },
-        { withCredentials: true }
-      )
+      const res = await apiClient.put('/auth/video-call/update-status', { bookingId, status })
       if (res.data.validate) {
         toast.success('Booking status updated')
         if (res.data.videoCallUrl) {
@@ -108,10 +105,7 @@ function AdminPanel() {
 
   const updateUserRole = async (email, role) => {
     try {
-      const res = await axios.put('http://localhost:3000/api/auth/admin/update-role',
-        { email, role },
-        { withCredentials: true }
-      )
+      const res = await apiClient.put('/auth/admin/update-role', { email, role })
       if (res.data.validate) {
         toast.success('User role updated')
         fetchData()

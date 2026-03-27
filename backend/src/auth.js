@@ -34,10 +34,11 @@ try {
 
 // main
 const router=express.Router();
+const databaseUrl = process.env.DATABASE_URL;
 
 // connect to database
 const db = new pg.Client({
-  connectionString: "postgresql://neondb_owner:npg_AYUqkRp3GX1x@ep-weathered-unit-amj3ioav-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+  connectionString: databaseUrl,
   ssl: {
     rejectUnauthorized: false
   }
@@ -49,51 +50,55 @@ const getUserByEmail = async (email) => {
 };
 
 // Connect to database and initialize tables
-db.connect()
-    .then(() => {
-        console.log("Connected to database");
-        // Create users table with role column if not exists
-        return db.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                fullname VARCHAR(255) NOT NULL,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                profilepic TEXT,
-                role VARCHAR(20) DEFAULT 'user',
-                stream_token TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-    })
-    .then(() => {
-        // Create video_call_bookings table
-        return db.query(`
-            CREATE TABLE IF NOT EXISTS video_call_bookings (
-                id SERIAL PRIMARY KEY,
-                booking_id VARCHAR(50) UNIQUE NOT NULL,
-                user_email VARCHAR(255) NOT NULL,
-                user_name VARCHAR(255) NOT NULL,
-                session_type VARCHAR(50) NOT NULL,
-                scheduled_time TIMESTAMP NOT NULL,
-                duration INTEGER DEFAULT 30,
-                status VARCHAR(20) DEFAULT 'pending',
-                stream_session_id VARCHAR(255),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-    })
-    .then(() => console.log("Database tables initialized"))
-    .catch(err => console.log("Database connection error:", err.message))
-    .finally(() => {
-        // Add missing columns to existing users table
-        db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user'`)
-            .catch(() => {});
-        db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stream_token TEXT`)
-            .catch(() => {});
-        db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`)
-            .catch(() => {});
-    });
+if (databaseUrl) {
+  db.connect()
+      .then(() => {
+          console.log("Connected to database");
+          // Create users table with role column if not exists
+          return db.query(`
+              CREATE TABLE IF NOT EXISTS users (
+                  id SERIAL PRIMARY KEY,
+                  fullname VARCHAR(255) NOT NULL,
+                  email VARCHAR(255) UNIQUE NOT NULL,
+                  password VARCHAR(255) NOT NULL,
+                  profilepic TEXT,
+                  role VARCHAR(20) DEFAULT 'user',
+                  stream_token TEXT,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              )
+          `);
+      })
+      .then(() => {
+          // Create video_call_bookings table
+          return db.query(`
+              CREATE TABLE IF NOT EXISTS video_call_bookings (
+                  id SERIAL PRIMARY KEY,
+                  booking_id VARCHAR(50) UNIQUE NOT NULL,
+                  user_email VARCHAR(255) NOT NULL,
+                  user_name VARCHAR(255) NOT NULL,
+                  session_type VARCHAR(50) NOT NULL,
+                  scheduled_time TIMESTAMP NOT NULL,
+                  duration INTEGER DEFAULT 30,
+                  status VARCHAR(20) DEFAULT 'pending',
+                  stream_session_id VARCHAR(255),
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              )
+          `);
+      })
+      .then(() => console.log("Database tables initialized"))
+      .catch(err => console.log("Database connection error:", err.message))
+      .finally(() => {
+          // Add missing columns to existing users table
+          db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user'`)
+              .catch(() => {});
+          db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stream_token TEXT`)
+              .catch(() => {});
+          db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`)
+              .catch(() => {});
+      });
+} else {
+  console.error("DATABASE_URL is missing; auth routes will not work until it is configured.");
+}
 
 // code for authentication routes will go here
 // local strategy

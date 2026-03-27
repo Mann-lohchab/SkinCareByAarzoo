@@ -9,10 +9,10 @@ import VideoCallBooking from './pages/VideoCallBooking'
 import VideoCall from './pages/VideoCall'
 import ChatPage from './pages/ChatPage'
 import { useEffect, useState } from 'react'
-import axios from 'axios'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { useStore } from './zustnd/store'
+import { apiClient } from './lib/config'
 
 function App() {
   const { user, setUser } = useStore()
@@ -21,9 +21,9 @@ function App() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get(
-          'http://localhost:3000/api/auth/user',
-          { withCredentials: true, headers: {
+        const res = await apiClient.get(
+          '/auth/user',
+          { headers: {
             "Cache-Control": "no-cache"
           }}
         )

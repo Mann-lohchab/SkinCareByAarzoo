@@ -1,10 +1,25 @@
 const DEFAULT_WS_URL = "ws://localhost:3000/ws";
 
+function createMockSocket() {
+  return {
+    close() {},
+    send() {},
+    addEventListener() {},
+    removeEventListener() {},
+    readyState: 3,
+  };
+}
+
 function resolveWebSocketUrl() {
   const configuredUrl = import.meta.env.VITE_WS_URL;
+  const enableRealtime = import.meta.env.VITE_ENABLE_REALTIME === "true";
 
   if (configuredUrl) {
     return configuredUrl;
+  }
+
+  if (!enableRealtime) {
+    return null;
   }
 
   if (typeof window === "undefined") {
@@ -19,7 +34,14 @@ function resolveWebSocketUrl() {
 }
 
 export function connectRealtime({ onMessage, onOpen, onClose } = {}) {
-  const socket = new WebSocket(resolveWebSocketUrl());
+  const url = resolveWebSocketUrl();
+
+  if (!url) {
+    onClose?.();
+    return createMockSocket();
+  }
+
+  const socket = new WebSocket(url);
 
   socket.addEventListener("open", () => {
     socket.send(JSON.stringify({ type: "ping" }));

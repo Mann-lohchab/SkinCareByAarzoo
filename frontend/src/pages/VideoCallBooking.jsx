@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
 import { toast } from 'react-toastify'
 import '../style/Dashboard.css'
 import { useStore } from '../zustnd/store'
 import { Navbar } from '../components/Navbar'
 import { connectRealtime } from '../lib/realtime'
+import { apiClient } from '../lib/config'
 
 function VideoCallBooking() {
   const { user, setUser } = useStore()
@@ -52,7 +52,7 @@ function VideoCallBooking() {
   const fetchBookings = async () => {
     try {
       setLoading(true)
-      const res = await axios.get('http://localhost:3000/api/auth/video-call/bookings', { withCredentials: true })
+      const res = await apiClient.get('/auth/video-call/bookings')
       if (res.data.validate) {
         setBookings(res.data.bookings)
       }
@@ -65,7 +65,7 @@ function VideoCallBooking() {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true })
+      await apiClient.post('/auth/logout', {})
       setUser(null)
       toast.success('Logged out successfully!')
       navigate('/login')
@@ -78,7 +78,7 @@ function VideoCallBooking() {
     e.preventDefault()
     try {
       setLoading(true)
-      const res = await axios.post('http://localhost:3000/api/auth/video-call/create', formData, { withCredentials: true })
+      const res = await apiClient.post('/auth/video-call/create', formData)
       if (res.data.validate) {
         toast.success('Video call session booked successfully!')
         setShowForm(false)
@@ -98,7 +98,7 @@ function VideoCallBooking() {
 
   const handleDelete = async (bookingId) => {
     try {
-      const res = await axios.delete(`http://localhost:3000/api/auth/video-call/delete/${bookingId}`, { withCredentials: true })
+      const res = await apiClient.delete(`/auth/video-call/delete/${bookingId}`)
       if (res.data.validate) {
         toast.success('Booking cancelled')
         fetchBookings()

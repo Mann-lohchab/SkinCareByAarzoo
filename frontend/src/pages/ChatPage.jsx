@@ -13,6 +13,7 @@ import { StreamChat } from "stream-chat";
 import { ToastContainer, toast } from "react-toastify";
 import "stream-chat-react/css/v2/index.css";
 import "react-toastify/dist/ReactToastify.css";
+import { apiUrl } from "../lib/config";
 
 // GetStream API Key from environment variable
 const STREAM_API_KEY = import.meta.env.VITE_GETSTREAM_API_KEY || "kjuyb9r35pvr";
@@ -30,7 +31,7 @@ const ChatPage = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/auth/user", {
+        const response = await fetch(apiUrl("/auth/user"), {
           credentials: "include",
         });
         const data = await response.json();
@@ -56,7 +57,7 @@ const ChatPage = () => {
         console.log("Initializing stream chat client...");
 
         // Get Stream token from backend
-        const tokenResponse = await fetch("http://localhost:3000/api/chat/token", {
+        const tokenResponse = await fetch(apiUrl("/chat/token"), {
           credentials: "include",
         });
         const tokenData = await tokenResponse.json();

@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
 import { toast } from 'react-toastify'
 import '../style/Signup.css'
 import gmailIcon from '../assets/gmail.png'
 import passwordIcon from '../assets/password.png'
 import pic from '../assets/pic.png'
 import profileIcon from '../assets/profile.png'
+import { apiClient } from '../lib/config'
 
 function Signup() {
   const [formData, setFormData] = useState({
@@ -26,7 +26,7 @@ function Signup() {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const res = await axios.post('http://localhost:3000/api/auth/register', formData, { withCredentials: true })
+      const res = await apiClient.post('/auth/register', formData)
       if (res.data.validate) {
         toast.success('OTP sent! Code: ' + res.data.otp + ' (Check email or use this code)')
         navigate('/otp')

@@ -2,9 +2,9 @@ import React from 'react'
 import '../style/Dashboard.css'
 import { useStore } from '../zustnd/store'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
 import { toast } from 'react-toastify'
 import { Navbar } from '../components/Navbar'
+import { apiClient } from '../lib/config'
 
 function Dashboard() {
   const { user, setUser } = useStore()
@@ -12,7 +12,7 @@ function Dashboard() {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true })
+      await apiClient.post('/auth/logout', {})
       setUser(null)
       toast.success('Logged out successfully!')
       navigate('/login')

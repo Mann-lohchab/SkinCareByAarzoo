@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import axios from 'axios'
 import { toast } from 'react-toastify'
 import {
   StreamVideo,
@@ -13,6 +12,7 @@ import {
 import '@stream-io/video-react-sdk/dist/css/styles.css'
 import { useStore } from '../zustnd/store'
 import { Navbar } from '../components/Navbar'
+import { apiClient } from '../lib/config'
 
 // API Key from environment
 const API_KEY = import.meta.env.VITE_GETSTREAM_API_KEY || 'kjuyb9r35pvr'
@@ -38,9 +38,7 @@ function VideoCall() {
     const setupVideoCall = async () => {
       try {
         // Get token from backend
-        const res = await axios.get('http://localhost:3000/api/auth/video-call/token', { 
-          withCredentials: true 
-        })
+        const res = await apiClient.get('/auth/video-call/token')
         
         if (res.data.validate) {
           setToken(res.data.token)

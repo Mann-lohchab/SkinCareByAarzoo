@@ -3,21 +3,22 @@ import razorpay from "razorpay"
 import pg from "pg"
 const router = Router();
 // setup menu database
-const db=new pg.Client({
-    user: "postgres",
-    host: "localhost",
-    database: "chatroom",
-    password: "123456",
-    port: 5432,
+const db = new pg.Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false,
+    },
 });
+function getRazorpayInstance() {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+        return null;
+    }
 
-
-
-// initialize razorpay
-const razorpayInstance = new razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-})
+    return new razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+}
 
 
 // routes
@@ -26,6 +27,12 @@ router.get("/", (req, res) => {
 })
 router.post("/billing", async (req, res) => {
   try {
+    const razorpayInstance = getRazorpayInstance();
+
+    if (!razorpayInstance) {
+      return res.status(500).json({ error: "Razorpay is not configured" });
+    }
+
     let { items } = req.query;
 
 
@@ -67,6 +74,12 @@ router.post("/billing", async (req, res) => {
 });
 router.post("/verify", async (req, res) => {
   try {
+    const razorpayInstance = getRazorpayInstance();
+
+    if (!razorpayInstance) {
+      return res.status(500).json({ error: "Razorpay is not configured" });
+    }
+
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
       req.body;
 
@@ -94,4 +107,4 @@ router.post("/verify", async (req, res) => {
 
 
 export default router;
-export { razorpayInstance };
+export { getRazorpayInstance };
