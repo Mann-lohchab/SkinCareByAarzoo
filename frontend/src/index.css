@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700;800&display=swap');
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    text-decoration: none;
+    list-style: none;
+}
+
+:root {
+  /* Colors */
+  --color-primary-blue: #2563EB;
+  --color-deep-blue: #1E3A8A;
+  --color-background: #FFFFFF;
+  --color-light-background: #F5F7FF;
+  --color-text: #0A0A0A;
+  --color-border: #000000;
+  
+  /* Brutalist border */
+  --brutalist-border: 3px solid var(--color-border);
+  
+  /* Brutalist shadow */
+  --brutalist-shadow: 6px 6px 0px black;
+  
+  /* Typography */
+  --font-sans: 'Roboto Mono', 'Courier New', monospace;
+  --font-mono: 'Roboto Mono', 'Courier New', monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  line-height: 1.6;
+}
