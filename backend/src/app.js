@@ -9,12 +9,18 @@ import paymentRouter from "./payment.js";
 import chatRouter from "./routes/chat.route.js";
 
 function getAllowedOrigins() {
+  const configuredOrigins = (process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   return new Set(
     [
       "http://localhost:5173",
+      "http://127.0.0.1:5173",
       process.env.FRONTEND_URL,
       process.env.APP_URL,
-      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+      ...configuredOrigins,
     ].filter(Boolean)
   );
 }
@@ -25,7 +31,7 @@ export function createApp() {
   const allowedOrigins = getAllowedOrigins();
   const isProduction = process.env.NODE_ENV === "production";
 
-  app.set("trust proxy", 1);
+  app.set("trust proxy", process.env.TRUST_PROXY || 1);
 
   app.use(
     cors({
@@ -44,6 +50,30 @@ export function createApp() {
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  app.use((req, res, next) => {
+    const startedAt = Date.now();
+    const origin = req.get("origin") || "direct";
+    const referer = req.get("referer") || "-";
+    const forwardedFor = req.get("x-forwarded-for");
+    const clientIp =
+      (forwardedFor && forwardedFor.split(",")[0].trim()) ||
+      req.ip ||
+      req.socket?.remoteAddress ||
+      "unknown";
+
+    res.on("finish", () => {
+      const durationMs = Date.now() - startedAt;
+      const userAgent = req.get("user-agent") || "-";
+      const isKnownFrontendOrigin = origin !== "direct" && allowedOrigins.has(origin);
+
+      console.log(
+        `[request] ${req.method} ${req.originalUrl} status=${res.statusCode} duration=${durationMs}ms ip=${clientIp} origin=${origin} knownFrontend=${isKnownFrontendOrigin} referer=${referer} ua="${userAgent}"`
+      );
+    });
+
+    next();
+  });
 
   const sessionStore = process.env.DATABASE_URL
     ? new PgSession({
@@ -76,8 +106,8 @@ export function createApp() {
   app.get("/api/health", (_req, res) => {
     res.status(200).json({
       ok: true,
-      websocket: false,
-      deployment: process.env.VERCEL ? "vercel" : "node",
+      websocket: true,
+      runtime: "node",
     });
   });
 

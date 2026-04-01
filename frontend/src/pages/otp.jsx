@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import '../style/Login.css' // reuse login css for similar design
+import '../style/Login.css'
+import passwordIcon from '../assets/password.png'
 import pic from '../assets/pic.png'
 import { apiClient } from '../lib/config'
 
@@ -55,24 +56,62 @@ function Otp() {
   }
 
   return (
-    <div className='container'>
-      <div className="content">
-        <div className="login">
-          <div className="header">Verify OTP</div>
-          <form action="" className='forms' onSubmit={handleVerify}>
-            <div className="input-group">
-              <label htmlFor="otp">Enter OTP</label>
-              <input type="text" id='otp' placeholder='Enter the OTP sent to your email' value={otp} onChange={(e) => setOtp(e.target.value)} required />
-            </div>
+    <div className='login-page'>
+      <div className="login-layout">
+        <div className="login-panel">
+          <div className="login-card">
+            <div className="login-kicker">SkinCareByAarzoo</div>
+            <h1 className="login-title">Verify your code</h1>
+            <p className="login-subtitle">
+              Enter the 6-digit OTP sent to your email to complete account creation.
+            </p>
 
-            <button type='submit' className='login-btn'>Verify</button>
-            <div className="or">or</div>
-            <button type='button' className='signup' onClick={handleResend} disabled={timer > 0}>
-              {timer > 0 ? `Resend in ${Math.floor(timer / 60)}:${(timer % 60).toString().padStart(2, '0')}` : 'Resend OTP'}
-            </button>
-          </form>
+            <form className='login-form' onSubmit={handleVerify}>
+              <div className="login-field">
+                <label htmlFor="otp">One-time password</label>
+                <div className="login-input-wrap otp-input-wrap">
+                  <img src={passwordIcon} alt="" aria-hidden="true" className="login-icon" />
+                  <input
+                    type="text"
+                    id='otp'
+                    inputMode='numeric'
+                    autoComplete='one-time-code'
+                    maxLength={6}
+                    className='otp-input'
+                    placeholder='Enter the 6-digit OTP'
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <p className="otp-timer-text">
+                {timer > 0
+                  ? `You can request a new code in ${Math.floor(timer / 60)}:${(timer % 60).toString().padStart(2, '0')}`
+                  : 'Your code expired? Request a new OTP below.'}
+              </p>
+
+              <button type='submit' className='login-submit'>Verify OTP</button>
+
+              <div className="login-divider">or</div>
+
+              <button type='button' className='login-secondary' onClick={handleResend} disabled={timer > 0}>
+                {timer > 0 ? `Resend in ${Math.floor(timer / 60)}:${(timer % 60).toString().padStart(2, '0')}` : 'Resend OTP'}
+              </button>
+            </form>
+          </div>
         </div>
-        <div className="pic"><img src={pic} alt="" srcSet="" className='pic'/></div>
+
+        <div className="login-visual">
+          <img src={pic} alt="Skincare verification screen" />
+          <div className="login-overlay">
+            <h2>Secure signup, smooth handoff.</h2>
+            <p>
+              Finish verification to unlock bookings, consultations, and client access without friction.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

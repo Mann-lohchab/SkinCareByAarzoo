@@ -1,8 +1,9 @@
 import http from "http";
-import dotenv from "dotenv";
 import { createApp } from "./app.js";
+import { loadEnv } from "./env.js";
 import { setupWebSocketServer } from "./websocket.js";
-dotenv.config();
+
+loadEnv();
 
 const { app, sessionMiddleware, getUserByEmail } = createApp();
 const server = http.createServer(app);

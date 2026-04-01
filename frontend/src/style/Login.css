@@ -260,6 +260,70 @@ body {
   line-height: 1.7;
 }
 
+.otp-input-wrap {
+  min-height: 64px;
+}
+
+.otp-input {
+  letter-spacing: 0.28em;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.otp-timer-text {
+  margin: -2px 0 2px;
+  color: #6b7280;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 980px) {
+  .login-page {
+    padding: 20px;
+  }
+
+  .login-layout {
+    min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .login-panel {
+    order: 2;
+    padding: 36px 24px;
+  }
+
+  .login-visual {
+    order: 1;
+    min-height: 320px;
+  }
+
+  .login-overlay {
+    padding: 28px 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .login-page {
+    padding: 14px;
+  }
+
+  .login-layout {
+    border-radius: 24px;
+  }
+
+  .login-panel {
+    padding: 28px 18px;
+  }
+
+  .login-input-wrap {
+    padding: 0 14px;
+  }
+
+  .otp-input {
+    letter-spacing: 0.18em;
+  }
+}
+
 @media (max-width: 980px) {
   .login-page {
     padding: 20px;

@@ -1,8 +1,8 @@
 import pg from "pg";
-import dotenv from "dotenv";
 import { StreamChat } from "stream-chat";
+import { loadEnv } from "../env.js";
 
-dotenv.config();
+loadEnv();
 
 // GetStream configuration - ensure proper string handling
 const GETSTREAM_API_KEY = String(process.env.GETSTREAM_API_KEY || "-1417325");
@@ -14,12 +14,17 @@ console.log("GetStream API Key:", GETSTREAM_API_KEY);
 const streamClient = StreamChat.getInstance(GETSTREAM_API_KEY, GETSTREAM_API_SECRET);
 
 // Database connection
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required to onboard users.");
+}
+
 const db = new pg.Client({
-  user: "postgres",
-  host: "localhost",
-  database: "chatroom",
-  password: "123456",
-  port: 5432,
+  connectionString: databaseUrl,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 async function onboardAllUsers() {

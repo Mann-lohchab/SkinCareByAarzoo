@@ -1,21 +1,19 @@
 import express from "express";
-import cors from "cors";
 import pg from "pg";
 import bcrypt from "bcrypt";
-import dotenv from "dotenv";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import session from "express-session";
 import { sendOTPEmail } from "./controller/sendotp.js";
 import { v4 as uuidv4 } from "uuid";
 import { StreamChat } from "stream-chat";
 import { StreamVideoClient } from "@stream-io/video-client";
+import { loadEnv } from "./env.js";
 import { upsertStreamUser } from "./lib/stream.js";
 import jwt from "jsonwebtoken";
 import { createRealtimeEvent, emitRealtimeEvent } from "./websocket.js";
 
 // Load environment variables
-dotenv.config();
+loadEnv();
 
 // GetStream configuration
 const GETSTREAM_API_KEY = process.env.GETSTREAM_API_KEY || "-1417325";
@@ -35,6 +33,9 @@ try {
 // main
 const router=express.Router();
 const databaseUrl = process.env.DATABASE_URL;
+const DEFAULT_ADMIN_EMAIL = "skincare.by.aarzoo@gmail.com";
+const DEFAULT_ADMIN_PASSWORD = "SkinCare@Aarzoo";
+const DEFAULT_ADMIN_FULLNAME = "SkinCare By Aarzoo";
 
 // connect to database
 const db = new pg.Client({
@@ -49,53 +50,62 @@ const getUserByEmail = async (email) => {
   return result.rows[0] || null;
 };
 
+async function initializeDatabase() {
+  await db.connect();
+  console.log("Connected to database");
+
+  await db.query(`
+      CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          fullname VARCHAR(255) NOT NULL,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          profilepic TEXT,
+          role VARCHAR(20) DEFAULT 'user',
+          stream_token TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+  `);
+
+  await db.query(`
+      CREATE TABLE IF NOT EXISTS video_call_bookings (
+          id SERIAL PRIMARY KEY,
+          booking_id VARCHAR(50) UNIQUE NOT NULL,
+          user_email VARCHAR(255) NOT NULL,
+          user_name VARCHAR(255) NOT NULL,
+          session_type VARCHAR(50) NOT NULL,
+          scheduled_time TIMESTAMP NOT NULL,
+          duration INTEGER DEFAULT 30,
+          status VARCHAR(20) DEFAULT 'pending',
+          stream_session_id VARCHAR(255),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+  `);
+
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user'`);
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stream_token TEXT`);
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+
+  const adminPasswordHash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10);
+  await db.query(
+    `INSERT INTO users (fullname, email, password, role)
+     VALUES ($1, $2, $3, 'admin')
+     ON CONFLICT (email) DO UPDATE
+     SET fullname = EXCLUDED.fullname,
+         password = EXCLUDED.password,
+         role = 'admin'`,
+    [DEFAULT_ADMIN_FULLNAME, DEFAULT_ADMIN_EMAIL, adminPasswordHash]
+  );
+
+  console.log("Database tables initialized");
+  console.log(`Admin user ensured for ${DEFAULT_ADMIN_EMAIL}`);
+}
+
 // Connect to database and initialize tables
 if (databaseUrl) {
-  db.connect()
-      .then(() => {
-          console.log("Connected to database");
-          // Create users table with role column if not exists
-          return db.query(`
-              CREATE TABLE IF NOT EXISTS users (
-                  id SERIAL PRIMARY KEY,
-                  fullname VARCHAR(255) NOT NULL,
-                  email VARCHAR(255) UNIQUE NOT NULL,
-                  password VARCHAR(255) NOT NULL,
-                  profilepic TEXT,
-                  role VARCHAR(20) DEFAULT 'user',
-                  stream_token TEXT,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-              )
-          `);
-      })
-      .then(() => {
-          // Create video_call_bookings table
-          return db.query(`
-              CREATE TABLE IF NOT EXISTS video_call_bookings (
-                  id SERIAL PRIMARY KEY,
-                  booking_id VARCHAR(50) UNIQUE NOT NULL,
-                  user_email VARCHAR(255) NOT NULL,
-                  user_name VARCHAR(255) NOT NULL,
-                  session_type VARCHAR(50) NOT NULL,
-                  scheduled_time TIMESTAMP NOT NULL,
-                  duration INTEGER DEFAULT 30,
-                  status VARCHAR(20) DEFAULT 'pending',
-                  stream_session_id VARCHAR(255),
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-              )
-          `);
-      })
-      .then(() => console.log("Database tables initialized"))
-      .catch(err => console.log("Database connection error:", err.message))
-      .finally(() => {
-          // Add missing columns to existing users table
-          db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user'`)
-              .catch(() => {});
-          db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stream_token TEXT`)
-              .catch(() => {});
-          db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`)
-              .catch(() => {});
-      });
+  initializeDatabase().catch((err) => {
+    console.log("Database connection error:", err.message);
+  });
 } else {
   console.error("DATABASE_URL is missing; auth routes will not work until it is configured.");
 }

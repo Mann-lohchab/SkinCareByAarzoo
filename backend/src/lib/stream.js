@@ -1,5 +1,7 @@
 import { StreamChat } from "stream-chat";
-import "dotenv/config";
+import { loadEnv } from "../env.js";
+
+loadEnv();
 
 const apiKey = process.env.GETSTREAM_API_KEY;
 const apiSecret = process.env.GETSTREAM_API_SECRET;
