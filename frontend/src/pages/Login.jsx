@@ -26,7 +26,7 @@ function Login() {
     setIsLoading(true)
     try {
       const res = await apiClient.post('/auth/login', formData)
-      
+
       // Check if login was successful
       if (res.status === 200 && (res.data?.validate === true || res.data?.message?.includes('success'))) {
         // Fetch user data
@@ -68,7 +68,7 @@ function Login() {
       <div className="login-layout">
         <div className="login-panel">
           <div className="login-card">
-            <div className="login-kicker">SkinCareByAarzoo</div>
+            <a href="/" className="login-kicker">SkinCareByAarzoo</a>
             <h1 className="login-title">Welcome back</h1>
             <p className="login-subtitle">
               Sign in to manage your appointments, dashboard access, and skincare consultations in one place.

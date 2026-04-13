@@ -13,7 +13,7 @@ function Signup() {
     fullname: '',
     email: '',
     password: '',
-    profilepic: ''
+    // profilepic: ''
   })
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
@@ -28,7 +28,7 @@ function Signup() {
     try {
       const res = await apiClient.post('/auth/register', formData)
       if (res.data.validate) {
-        toast.success('OTP sent! Code: ' + res.data.otp + ' (Check email or use this code)')
+        toast.success(res.data.message || 'OTP sent to your email.')
         navigate('/otp')
       } else {
         toast.error(res.data.message)
@@ -112,7 +112,7 @@ function Signup() {
                 </div>
               </div>
 
-              <div className="signup-field">
+              {/* <div className="signup-field">
                 <label htmlFor="profilepic">Profile picture URL</label>
                 <div className="signup-input-wrap">
                   <img src={profileIcon} alt="" aria-hidden="true" className="signup-icon" />
@@ -126,7 +126,7 @@ function Signup() {
                     required
                   />
                 </div>
-              </div>
+              </div>*/}
 
               <button type='submit' className='signup-submit' disabled={isLoading}>
                 {isLoading ? 'Signing up...' : 'Create account'}

@@ -7,11 +7,55 @@ import { Navbar } from '../components/Navbar'
 import { connectRealtime } from '../lib/realtime'
 import { apiClient } from '../lib/config'
 
+const SESSION_PRICING_INR = {
+  consultation: 1499,
+  technical: 1999,
+  followup: 999,
+  demo: 2499,
+}
+
+const EXTRA_15_MIN_PRICE_INR = 349
+const RAZORPAY_CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js'
+let razorpayCheckoutLoader
+
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount)
+
+const getBookingAmount = (sessionType, duration) => {
+  const baseAmount = SESSION_PRICING_INR[sessionType] || SESSION_PRICING_INR.consultation
+  const extraBlocks = Math.max(0, Math.ceil((Number(duration) - 30) / 15))
+  return baseAmount + extraBlocks * EXTRA_15_MIN_PRICE_INR
+}
+
+const loadRazorpayCheckout = () => {
+  if (window.Razorpay) {
+    return Promise.resolve(true)
+  }
+
+  if (!razorpayCheckoutLoader) {
+    razorpayCheckoutLoader = new Promise((resolve) => {
+      const script = document.createElement('script')
+      script.src = RAZORPAY_CHECKOUT_SRC
+      script.async = true
+      script.onload = () => resolve(true)
+      script.onerror = () => resolve(false)
+      document.body.appendChild(script)
+    })
+  }
+
+  return razorpayCheckoutLoader
+}
+
 function VideoCallBooking() {
   const { user, setUser } = useStore()
   const navigate = useNavigate()
   const [bookings, setBookings] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loadingBookings, setLoadingBookings] = useState(false)
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     sessionType: 'consultation',
@@ -51,7 +95,7 @@ function VideoCallBooking() {
 
   const fetchBookings = async () => {
     try {
-      setLoading(true)
+      setLoadingBookings(true)
       const res = await apiClient.get('/auth/video-call/bookings')
       if (res.data.validate) {
         setBookings(res.data.bookings)
@@ -59,7 +103,7 @@ function VideoCallBooking() {
     } catch (err) {
       console.error(err)
     } finally {
-      setLoading(false)
+      setLoadingBookings(false)
     }
   }
 
@@ -76,23 +120,84 @@ function VideoCallBooking() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isProcessingPayment) {
+      return
+    }
+
+    setIsProcessingPayment(true)
     try {
-      setLoading(true)
-      const res = await apiClient.post('/auth/video-call/create', formData)
-      if (res.data.validate) {
-        toast.success('Video call session booked successfully!')
-        setShowForm(false)
-        setFormData({
-          sessionType: 'consultation',
-          scheduledTime: '',
-          duration: 30
-        })
-        fetchBookings()
+      const orderRes = await apiClient.post('/auth/video-call/payment/create-order', formData)
+      if (!orderRes.data?.validate) {
+        throw new Error(orderRes.data?.message || 'Unable to initialize payment')
       }
+
+      const isCheckoutReady = await loadRazorpayCheckout()
+      if (!isCheckoutReady || !window.Razorpay) {
+        throw new Error('Razorpay checkout failed to load')
+      }
+
+      const { orderId, amount, currency, keyId, bookingPreview } = orderRes.data
+
+      const checkout = new window.Razorpay({
+        key: keyId,
+        amount,
+        currency,
+        order_id: orderId,
+        name: 'SkinCare By Aarzoo',
+        description: `${bookingPreview?.sessionLabel || 'Video Call'} Booking`,
+        prefill: {
+          name: user?.fullname || '',
+          email: user?.email || '',
+        },
+        notes: {
+          sessionType: bookingPreview?.sessionType || formData.sessionType,
+          duration: String(formData.duration),
+        },
+        theme: {
+          color: '#2563EB',
+        },
+        modal: {
+          ondismiss: () => {
+            setIsProcessingPayment(false)
+            toast.info('Payment cancelled. Booking was not confirmed.')
+          },
+        },
+        handler: async (paymentResponse) => {
+          try {
+            const verifyRes = await apiClient.post('/auth/video-call/payment/verify-and-book', {
+              ...paymentResponse,
+              bookingData: formData,
+            })
+
+            if (!verifyRes.data?.validate) {
+              throw new Error(verifyRes.data?.message || 'Payment verification failed')
+            }
+
+            toast.success('Payment successful! Booking confirmed.')
+            setShowForm(false)
+            setFormData({
+              sessionType: 'consultation',
+              scheduledTime: '',
+              duration: 30,
+            })
+            await fetchBookings()
+          } catch (verifyErr) {
+            toast.error(verifyErr.response?.data?.message || verifyErr.message || 'Error confirming booking')
+          } finally {
+            setIsProcessingPayment(false)
+          }
+        },
+      })
+
+      checkout.on('payment.failed', (response) => {
+        setIsProcessingPayment(false)
+        toast.error(response?.error?.description || 'Payment failed. Please try again.')
+      })
+
+      checkout.open()
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error booking session')
-    } finally {
-      setLoading(false)
+      setIsProcessingPayment(false)
+      toast.error(err.response?.data?.message || err.message || 'Error processing payment')
     }
   }
 
@@ -135,6 +240,9 @@ function VideoCallBooking() {
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
     return now.toISOString().slice(0, 16)
   }
+
+  const selectedSession = sessionTypes.find((session) => session.value === formData.sessionType)
+  const estimatedAmount = getBookingAmount(formData.sessionType, formData.duration)
 
   return (
     <>
@@ -213,8 +321,21 @@ function VideoCallBooking() {
                   />
                 </div>
 
-                <button type='submit' className='btn-primary' disabled={loading}>
-                  {loading ? 'Booking...' : 'Confirm Booking'}
+                <div className='payment-summary'>
+                  <div className='payment-summary-title'>Payment Summary</div>
+                  <div className='payment-summary-row'>
+                    <span>{selectedSession?.label || 'Session'}</span>
+                    <strong>{formatCurrency(estimatedAmount)}</strong>
+                  </div>
+                  <div className='payment-summary-note'>
+                    Secure Razorpay payment is required to confirm your booking.
+                  </div>
+                </div>
+
+                <button type='submit' className='btn-primary' disabled={isProcessingPayment}>
+                  {isProcessingPayment
+                    ? 'Opening Payment...'
+                    : `Pay ${formatCurrency(estimatedAmount)} & Confirm Booking`}
                 </button>
               </form>
             )}
@@ -222,7 +343,7 @@ function VideoCallBooking() {
 
           <div className='my-bookings'>
             <h2>My Bookings</h2>
-            {loading && bookings.length === 0 ? (
+            {loadingBookings && bookings.length === 0 ? (
               <div className='loading-state'>Loading your bookings...</div>
             ) : bookings.length === 0 ? (
               <div className='brutalist-card empty-state'>
@@ -257,6 +378,12 @@ function VideoCallBooking() {
                           {booking.status}
                         </span>
                       </div>
+                      {booking.payment_id && (
+                        <div className='detail-row'>
+                          <span className='label'>Payment:</span>
+                          <span className='value paid-label'>Paid</span>
+                        </div>
+                      )}
                     </div>
                     {booking.status === 'pending' && (
                       <button 
@@ -440,6 +567,36 @@ function VideoCallBooking() {
           accent-color: #2563EB;
         }
 
+        .payment-summary {
+          border: 3px solid black;
+          background: #eef4ff;
+          box-shadow: 4px 4px 0px black;
+          padding: 14px;
+        }
+
+        .payment-summary-title {
+          font-weight: 800;
+          margin-bottom: 10px;
+          color: #0A0A0A;
+          text-transform: uppercase;
+          font-size: 0.82rem;
+          letter-spacing: 0.04em;
+        }
+
+        .payment-summary-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 0.95rem;
+          margin-bottom: 8px;
+        }
+
+        .payment-summary-note {
+          color: #444;
+          font-size: 0.82rem;
+          line-height: 1.45;
+        }
+
         .my-bookings h2 {
           color: #0A0A0A;
           margin-bottom: 20px;
@@ -512,6 +669,10 @@ function VideoCallBooking() {
         .detail-row .value {
           font-weight: 700;
           color: #0A0A0A;
+        }
+
+        .paid-label {
+          color: #2e7d32;
         }
 
         .status-indicator {

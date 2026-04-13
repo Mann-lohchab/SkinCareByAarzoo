@@ -62,7 +62,7 @@ export function CTASection() {
                 and get a personalized treatment plan.
               </p>
               <a
-                href="#"
+                href="/dashboard"
                 style={{
                   display: "inline-block",
                   background: "var(--color-primary-blue)",
@@ -75,7 +75,7 @@ export function CTASection() {
                   boxShadow: "4px 4px 0px black",
                 }}
               >
-                Book Consultation
+                  Book Consultation
               </a>
             </div>
 

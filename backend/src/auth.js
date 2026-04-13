@@ -10,6 +10,8 @@ import { StreamVideoClient } from "@stream-io/video-client";
 import { loadEnv } from "./env.js";
 import { upsertStreamUser } from "./lib/stream.js";
 import jwt from "jsonwebtoken";
+import Razorpay from "razorpay";
+import crypto from "crypto";
 import { createRealtimeEvent, emitRealtimeEvent } from "./websocket.js";
 
 // Load environment variables
@@ -36,6 +38,24 @@ const databaseUrl = process.env.DATABASE_URL;
 const DEFAULT_ADMIN_EMAIL = "skincare.by.aarzoo@gmail.com";
 const DEFAULT_ADMIN_PASSWORD = "SkinCare@Aarzoo";
 const DEFAULT_ADMIN_FULLNAME = "SkinCare By Aarzoo";
+const RAZORPAY_CURRENCY = "INR";
+const SESSION_PRICING_INR = Object.freeze({
+  consultation: 1499,
+  technical: 1999,
+  followup: 999,
+  demo: 2499,
+});
+const SESSION_TYPE_LABELS = Object.freeze({
+  consultation: "General Consultation",
+  technical: "Technical Support",
+  followup: "Follow-up Session",
+  demo: "Product Demo",
+});
+const VALID_SESSION_TYPES = new Set(Object.keys(SESSION_PRICING_INR));
+const BASE_DURATION_MINUTES = 30;
+const EXTRA_15_MIN_PRICE_INR = 349;
+const MIN_BOOKING_MINUTES = 15;
+const MAX_BOOKING_MINUTES = 120;
 
 // connect to database
 const db = new pg.Client({
@@ -49,6 +69,71 @@ const getUserByEmail = async (email) => {
   const result = await db.query("SELECT * FROM users WHERE email = $1", [email]);
   return result.rows[0] || null;
 };
+
+function getRazorpayClient() {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    return null;
+  }
+
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+}
+
+function getBookingAmountInInr(sessionType, duration) {
+  const baseAmount = SESSION_PRICING_INR[sessionType] || SESSION_PRICING_INR.consultation;
+  const extraBlocks = Math.max(0, Math.ceil((duration - BASE_DURATION_MINUTES) / 15));
+  return baseAmount + extraBlocks * EXTRA_15_MIN_PRICE_INR;
+}
+
+function parseBookingPayload(payload = {}) {
+  const sessionType = String(payload.sessionType || "").trim().toLowerCase();
+  if (!VALID_SESSION_TYPES.has(sessionType)) {
+    return { error: "Invalid session type selected" };
+  }
+
+  const duration = Number(payload.duration);
+  if (
+    !Number.isInteger(duration) ||
+    duration < MIN_BOOKING_MINUTES ||
+    duration > MAX_BOOKING_MINUTES ||
+    duration % 15 !== 0
+  ) {
+    return { error: "Duration must be between 15 and 120 minutes in 15-minute steps" };
+  }
+
+  const scheduledDate = new Date(payload.scheduledTime);
+  if (Number.isNaN(scheduledDate.getTime())) {
+    return { error: "Invalid scheduled date/time" };
+  }
+
+  if (scheduledDate.getTime() < Date.now() + 60 * 1000) {
+    return { error: "Please choose a future time for the booking" };
+  }
+
+  return {
+    sessionType,
+    duration,
+    scheduledDate,
+    amountInInr: getBookingAmountInInr(sessionType, duration),
+    sessionLabel: SESSION_TYPE_LABELS[sessionType] || sessionType,
+  };
+}
+
+function verifyRazorpayPaymentSignature({ orderId, paymentId, signature }) {
+  const secret = process.env.RAZORPAY_KEY_SECRET;
+  if (!secret || !orderId || !paymentId || !signature) {
+    return false;
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(`${orderId}|${paymentId}`)
+    .digest("hex");
+
+  return expectedSignature === signature;
+}
 
 async function initializeDatabase() {
   await db.connect();
@@ -85,6 +170,20 @@ async function initializeDatabase() {
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user'`);
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stream_token TEXT`);
   await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+  await db.query(`ALTER TABLE video_call_bookings ADD COLUMN IF NOT EXISTS payment_order_id VARCHAR(255)`);
+  await db.query(`ALTER TABLE video_call_bookings ADD COLUMN IF NOT EXISTS payment_id VARCHAR(255)`);
+  await db.query(`ALTER TABLE video_call_bookings ADD COLUMN IF NOT EXISTS payment_signature TEXT`);
+  await db.query(`ALTER TABLE video_call_bookings ADD COLUMN IF NOT EXISTS amount_paid INTEGER`);
+  await db.query(`ALTER TABLE video_call_bookings ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'INR'`);
+  await db.query(`ALTER TABLE video_call_bookings ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) DEFAULT 'unpaid'`);
+  await db.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_video_call_bookings_payment_order_id_unique
+     ON video_call_bookings (payment_order_id) WHERE payment_order_id IS NOT NULL`
+  );
+  await db.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_video_call_bookings_payment_id_unique
+     ON video_call_bookings (payment_id) WHERE payment_id IS NOT NULL`
+  );
 
   const adminPasswordHash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10);
   await db.query(
@@ -235,46 +334,20 @@ router.post("/register", async (req, res) => {
       otpExpiry
     };
 
-    // Send OTP email
-    const mess_otp = await sendOTPEmail(email, otp).catch(err => {
-        console.log("Email sending failed:", err.message);
-        return { messageId: "mock-id" }; // For testing without email
-    });
+    const mailResult = await sendOTPEmail(email, otp);
 
-    if (mess_otp.messageId || mess_otp.messageId === "mock-id") {
-      res.send({
+    if (mailResult.messageId) {
+      return res.send({
         message: "OTP sent to email. Please verify to complete registration.",
         validate: true,
-        otp: otp // For testing purposes - remove in production
-      });
-    } else {
-      res.send({
-        message: "Error sending OTP email.",
-        validate: false,
-        error: mess_otp
       });
     }
-    
-    /*
-    // Original email sending code (for production)
-    const mess_otp = await sendOTPEmail(email, otp).catch(err => {
-        console.log("Email sending failed:", err.message);
-        return { messageId: "mock-id" }; // For testing without email
-    });
 
-    if (mess_otp.messageId || mess_otp.messageId === "mock-id") {
-      res.send({
-        message: "OTP sent to email. Please verify to complete registration.",
-        validate: true
-      });
-    } else {
-      res.send({
-        message: "Error sending OTP email.",
-        validate: false,
-        error: mess_otp
-      });
-    }
-    */
+    console.error("Failed to send OTP email during registration:", mailResult.error);
+    return res.status(502).send({
+      message: "Unable to send OTP email right now. Please try again.",
+      validate: false,
+    });
 
   } catch (err) {
     console.log(err);
@@ -352,26 +425,26 @@ router.post("/resend-otp", async (req, res) => {
   if (!req.session.data) {
     return res.status(400).send({ validate: false, message: "No registration in progress" });
   }
-  const { email, passwordHash, fullname,profilepic } = req.session.data;
+  const { email } = req.session.data;
   const otp = Math.floor(100000 + Math.random() * 900000);
   const otpExpiry = Date.now() + 2 * 60 * 1000;
   req.session.data.otp = otp;
   req.session.data.otpExpiry = otpExpiry;
 
-  const mess_otp = await sendOTPEmail(email, otp);
+  const mailResult = await sendOTPEmail(email, otp);
 
-  if (mess_otp) {
-    res.send({
+  if (mailResult.messageId) {
+    return res.send({
       message: "OTP resent successfully.",
       validate: true
     });
-  } else {
-    res.send({
-      message: "Error sending OTP email.",
-      validate: false,
-      error: mess_otp
-    });
   }
+
+  console.error("Failed to resend OTP email:", mailResult.error);
+  return res.status(502).send({
+    message: "Unable to resend OTP right now. Please try again.",
+    validate: false,
+  });
 });
 // update profile route
 const checkauth = (req, res, next) => {
@@ -434,23 +507,168 @@ router.get("/video-call/token", checkauth, async (req, res) => {
 
 // GetStream Video Call Routes
 
-// Create a video call session
-router.post("/video-call/create", checkauth, async (req, res) => {
+// Create Razorpay order for video-call booking payment
+router.post("/video-call/payment/create-order", checkauth, async (req, res) => {
   try {
-    const { sessionType, scheduledTime, duration } = req.body;
+    const razorpayClient = getRazorpayClient();
+    if (!razorpayClient) {
+      return res.status(500).send({
+        validate: false,
+        message: "Razorpay is not configured on the server",
+      });
+    }
+
+    const bookingDetails = parseBookingPayload(req.body);
+    if (bookingDetails.error) {
+      return res.status(400).send({ validate: false, message: bookingDetails.error });
+    }
+
+    const order = await razorpayClient.orders.create({
+      amount: bookingDetails.amountInInr * 100,
+      currency: RAZORPAY_CURRENCY,
+      receipt: `vc_${Date.now()}_${uuidv4().slice(0, 8)}`,
+      notes: {
+        userEmail: req.user.email,
+        sessionType: bookingDetails.sessionType,
+        duration: String(bookingDetails.duration),
+        scheduledTime: bookingDetails.scheduledDate.toISOString(),
+      },
+    });
+
+    return res.send({
+      validate: true,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.RAZORPAY_KEY_ID,
+      bookingPreview: {
+        sessionType: bookingDetails.sessionType,
+        sessionLabel: bookingDetails.sessionLabel,
+        scheduledTime: bookingDetails.scheduledDate.toISOString(),
+        duration: bookingDetails.duration,
+        amountInInr: bookingDetails.amountInInr,
+      },
+    });
+  } catch (err) {
+    console.error("Create payment order error:", err);
+    return res.status(500).send({
+      validate: false,
+      message: "Unable to create payment order",
+    });
+  }
+});
+
+// Verify Razorpay payment and confirm booking
+router.post("/video-call/payment/verify-and-book", checkauth, async (req, res) => {
+  try {
+    const {
+      razorpay_order_id: razorpayOrderId,
+      razorpay_payment_id: razorpayPaymentId,
+      razorpay_signature: razorpaySignature,
+      bookingData,
+    } = req.body || {};
+
+    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+      return res.status(400).send({
+        validate: false,
+        message: "Missing Razorpay payment details",
+      });
+    }
+
+    const bookingDetails = parseBookingPayload(bookingData);
+    if (bookingDetails.error) {
+      return res.status(400).send({ validate: false, message: bookingDetails.error });
+    }
+
+    const razorpayClient = getRazorpayClient();
+    if (!razorpayClient) {
+      return res.status(500).send({
+        validate: false,
+        message: "Razorpay is not configured on the server",
+      });
+    }
+
+    const isSignatureValid = verifyRazorpayPaymentSignature({
+      orderId: razorpayOrderId,
+      paymentId: razorpayPaymentId,
+      signature: razorpaySignature,
+    });
+
+    if (!isSignatureValid) {
+      return res.status(400).send({
+        validate: false,
+        message: "Invalid payment signature",
+      });
+    }
+
+    const [order, payment] = await Promise.all([
+      razorpayClient.orders.fetch(razorpayOrderId),
+      razorpayClient.payments.fetch(razorpayPaymentId),
+    ]);
+
+    if (!order || !payment || payment.order_id !== razorpayOrderId) {
+      return res.status(400).send({
+        validate: false,
+        message: "Payment details do not match the order",
+      });
+    }
+
+    if (Number(order.amount) !== bookingDetails.amountInInr * 100) {
+      return res.status(400).send({
+        validate: false,
+        message: "Paid amount does not match booking amount",
+      });
+    }
+
+    if (!["authorized", "captured"].includes(payment.status)) {
+      return res.status(400).send({
+        validate: false,
+        message: "Payment is not authorized yet",
+      });
+    }
+
+    const duplicateBooking = await db.query(
+      `SELECT booking_id FROM video_call_bookings
+       WHERE payment_id = $1 OR payment_order_id = $2
+       LIMIT 1`,
+      [razorpayPaymentId, razorpayOrderId]
+    );
+
+    if (duplicateBooking.rows.length > 0) {
+      return res.status(409).send({
+        validate: false,
+        message: "This payment has already been used for a booking",
+        bookingId: duplicateBooking.rows[0].booking_id,
+      });
+    }
+
     const user = req.user;
-    
-    // Generate booking ID
     const bookingId = `BOOK-${uuidv4().slice(0, 8).toUpperCase()}`;
-    
-    // Create a unique session ID for Stream Chat
     const streamSessionId = `session_${bookingId}`;
-    
-    // Store booking in database
+
     const result = await db.query(
-      `INSERT INTO video_call_bookings (booking_id, user_email, user_name, session_type, scheduled_time, duration, status, stream_session_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [bookingId, user.email, user.fullname, sessionType, scheduledTime, duration || 30, 'pending', streamSessionId]
+      `INSERT INTO video_call_bookings (
+        booking_id, user_email, user_name, session_type, scheduled_time, duration, status, stream_session_id,
+        payment_order_id, payment_id, payment_signature, amount_paid, currency, payment_status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING *`,
+      [
+        bookingId,
+        user.email,
+        user.fullname,
+        bookingDetails.sessionType,
+        bookingDetails.scheduledDate.toISOString(),
+        bookingDetails.duration,
+        "confirmed",
+        streamSessionId,
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature,
+        Number(order.amount),
+        order.currency || RAZORPAY_CURRENCY,
+        payment.status || "captured",
+      ]
     );
 
     emitRealtimeEvent(
@@ -462,15 +680,75 @@ router.post("/video-call/create", checkauth, async (req, res) => {
         includeAdmins: true,
       }
     );
-    
-    res.send({ 
-      validate: true, 
+
+    return res.send({
+      validate: true,
+      message: "Payment successful and booking confirmed",
+      booking: result.rows[0],
+    });
+  } catch (err) {
+    if (err.code === "23505") {
+      return res.status(409).send({
+        validate: false,
+        message: "This payment is already linked to a booking",
+      });
+    }
+
+    console.error("Verify payment and book error:", err);
+    return res.status(500).send({
+      validate: false,
+      message: "Unable to verify payment and confirm booking",
+    });
+  }
+});
+
+// Legacy direct booking route (admin only; users must pay first)
+router.post("/video-call/create", checkauth, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(402).send({
+        validate: false,
+        message: "Payment required. Please complete Razorpay checkout to confirm this booking.",
+      });
+    }
+
+    const { sessionType, scheduledTime, duration } = req.body;
+    const bookingId = `BOOK-${uuidv4().slice(0, 8).toUpperCase()}`;
+    const streamSessionId = `session_${bookingId}`;
+
+    const result = await db.query(
+      `INSERT INTO video_call_bookings (booking_id, user_email, user_name, session_type, scheduled_time, duration, status, stream_session_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [
+        bookingId,
+        req.user.email,
+        req.user.fullname,
+        sessionType,
+        scheduledTime,
+        duration || 30,
+        "pending",
+        streamSessionId,
+      ]
+    );
+
+    emitRealtimeEvent(
+      createRealtimeEvent("booking.created", {
+        booking: result.rows[0],
+      }),
+      {
+        targetUserEmail: req.user.email,
+        includeAdmins: true,
+      }
+    );
+
+    return res.send({
+      validate: true,
       message: "Video call session booked successfully",
-      booking: result.rows[0]
+      booking: result.rows[0],
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send({ validate: false, message: "Error creating video call session" });
+    return res.status(500).send({ validate: false, message: "Error creating video call session" });
   }
 });
 
