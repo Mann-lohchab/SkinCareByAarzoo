@@ -31,7 +31,7 @@ export function Footer() {
             marginBottom: '1rem',
           }}>
             <SkinIcon size={28} />
-            <span>DERMACLINICAL</span>
+            <span>SKINCARE BY AARZOO</span>
           </a>
           <p style={{ color: '#a0a0a0', lineHeight: 1.6, fontSize: '0.875rem' }}>
             Clinical skin health that addresses root causes, not just surface symptoms. 
@@ -65,8 +65,8 @@ export function Footer() {
         <div className="footer-section">
           <h4 style={{ color: 'white', marginBottom: '1rem', fontWeight: 700 }}>Contact</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <a href="mailto:info@dermaclinical.com" style={{ color: '#a0a0a0', textDecoration: 'none', fontSize: '0.875rem' }}>info@dermaclinical.com</a>
-            <a href="tel:+1234567890" style={{ color: '#a0a0a0', textDecoration: 'none', fontSize: '0.875rem' }}>+1 (234) 567-890</a>
+            <a href="mailto:info@dermaclinical.com" style={{ color: '#a0a0a0', textDecoration: 'none', fontSize: '0.875rem' }}>skincare.by.aarzoo@gmail.com</a>
+            <a href="tel:+1234567890" style={{ color: '#a0a0a0', textDecoration: 'none', fontSize: '0.875rem' }}>+91 9811658943</a>
             <p style={{ color: '#a0a0a0', fontSize: '0.875rem', marginTop: '0.5rem' }}>
               Available for consultations by appointment
             </p>
@@ -86,7 +86,7 @@ export function Footer() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
           Made with <HeartIcon size={16} style={{ color: '#dc2626' }} /> for healthy skin
         </div>
-        <p>© 2024 DermAClinical. All rights reserved. | This is not routine skincare — it's clinical skin health.</p>
+        <p>© 2024 SkinCareByAarzoo. All rights reserved. | This is not routine skincare — it's clinical skin health.</p>
       </div>
 
       <style>{`
