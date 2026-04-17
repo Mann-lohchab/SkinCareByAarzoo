@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { LuxuryNavbar } from '../components/home/LuxuryNavbar'
 import { HeroSection } from '../components/home/HeroSection'
 import { FeatureGrid } from '../components/home/FeatureGrid'
+import { Footer } from '../components/Footer'
 import '../style/Home.css'
 
 const principles = [
@@ -107,12 +108,7 @@ function Home() {
           </div>
         </section>
       </main>
-      <footer className="lux-footer">
-        <div className="home-luxury-shell lux-footer-row">
-          <p>SkinCare by Aarzoo</p>
-          <p>Evidence-led skincare for long-term skin health.</p>
-        </div>
-      </footer>
+      <Footer />
     </>
   )
 }

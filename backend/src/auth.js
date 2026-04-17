@@ -40,7 +40,7 @@ const DEFAULT_ADMIN_PASSWORD = "SkinCare@Aarzoo";
 const DEFAULT_ADMIN_FULLNAME = "SkinCare By Aarzoo";
 const RAZORPAY_CURRENCY = "INR";
 const SESSION_PRICING_INR = Object.freeze({
-  consultation: 1499,
+  consultation: 500,
   technical: 1999,
   followup: 999,
   demo: 2499,
@@ -54,6 +54,7 @@ const SESSION_TYPE_LABELS = Object.freeze({
 const VALID_SESSION_TYPES = new Set(Object.keys(SESSION_PRICING_INR));
 const BASE_DURATION_MINUTES = 30;
 const EXTRA_15_MIN_PRICE_INR = 349;
+const MIN_CONSULTATION_PRICE_INR = 500;
 const MIN_BOOKING_MINUTES = 15;
 const MAX_BOOKING_MINUTES = 120;
 
@@ -84,7 +85,13 @@ function getRazorpayClient() {
 function getBookingAmountInInr(sessionType, duration) {
   const baseAmount = SESSION_PRICING_INR[sessionType] || SESSION_PRICING_INR.consultation;
   const extraBlocks = Math.max(0, Math.ceil((duration - BASE_DURATION_MINUTES) / 15));
-  return baseAmount + extraBlocks * EXTRA_15_MIN_PRICE_INR;
+  const computedAmount = baseAmount + extraBlocks * EXTRA_15_MIN_PRICE_INR;
+
+  if (sessionType === "consultation") {
+    return Math.max(MIN_CONSULTATION_PRICE_INR, computedAmount);
+  }
+
+  return computedAmount;
 }
 
 function parseBookingPayload(payload = {}) {

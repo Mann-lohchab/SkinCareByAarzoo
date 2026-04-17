@@ -1,35 +1,36 @@
+import featureImageOne from '../../../media&images/WhatsApp Unknown 2026-04-14 at 7.29.12 PM/2e0d214c5ab870f42049975ed11480b6 (1).jpg.jpeg'
+import featureImageTwo from '../../../media&images/WhatsApp Unknown 2026-04-14 at 7.29.12 PM/e7ccc217301e8dbef9ad054436d7c0f7.jpg.jpeg'
+import featureImageThree from '../../../media&images/WhatsApp Unknown 2026-04-14 at 7.29.12 PM/2ad1016a0e3767d9c311176b898b5eb9.jpg.jpeg'
+import featureImageFour from '../../../media&images/WhatsApp Unknown 2026-04-14 at 7.29.12 PM/xxxsfssdfsd.jpeg'
+
 const features = [
   {
     title: 'Root-cause analysis',
     description:
       'Detailed intake and skin-pattern mapping to identify the triggers behind recurring concerns.',
     cta: 'Explore diagnostics',
-    image:
-      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1200&q=80',
+    image: featureImageOne,
   },
   {
     title: 'Personalized skincare plans',
     description:
       'Custom morning and evening routines calibrated to your sensitivity profile and lifestyle pace.',
     cta: 'View protocol design',
-    image:
-      'https://images.unsplash.com/photo-1526758097130-bab247274f58?auto=format&fit=crop&w=1200&q=80',
+    image: featureImageTwo,
   },
   {
     title: 'Barrier restoration strategy',
     description:
       'Ingredient sequencing focused on calm recovery, hydration depth, and resilience-first progress.',
     cta: 'See restoration flow',
-    image:
-      'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=1200&q=80',
+    image: featureImageThree,
   },
   {
     title: 'Long-term skin health',
     description:
       'A sustainable plan with ongoing review checkpoints to protect results and avoid cycle setbacks.',
     cta: 'Understand outcomes',
-    image:
-      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80',
+    image: featureImageFour,
   },
 ]
 

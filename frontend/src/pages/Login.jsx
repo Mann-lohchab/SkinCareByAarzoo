@@ -107,9 +107,9 @@ function Login() {
                 </div>
               </div>
 
-              <div className="login-row">
+              {/* <div className="login-row">
                 <button type="button" className="login-forgot">Forgot password?</button>
-              </div>
+              </div> */}
 
               <button type='submit' className='login-submit' disabled={isLoading}>
                 {isLoading ? 'Logging in...' : 'Login'}

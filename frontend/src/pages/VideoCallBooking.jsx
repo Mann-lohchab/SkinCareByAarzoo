@@ -8,13 +8,14 @@ import { connectRealtime } from '../lib/realtime'
 import { apiClient } from '../lib/config'
 
 const SESSION_PRICING_INR = {
-  consultation: 1499,
+  consultation: 500,
   technical: 1999,
   followup: 999,
   demo: 2499,
 }
 
 const EXTRA_15_MIN_PRICE_INR = 349
+const MIN_CONSULTATION_PRICE_INR = 500
 const RAZORPAY_CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js'
 let razorpayCheckoutLoader
 
@@ -28,7 +29,13 @@ const formatCurrency = (amount) =>
 const getBookingAmount = (sessionType, duration) => {
   const baseAmount = SESSION_PRICING_INR[sessionType] || SESSION_PRICING_INR.consultation
   const extraBlocks = Math.max(0, Math.ceil((Number(duration) - 30) / 15))
-  return baseAmount + extraBlocks * EXTRA_15_MIN_PRICE_INR
+  const computedAmount = baseAmount + extraBlocks * EXTRA_15_MIN_PRICE_INR
+
+  if (sessionType === 'consultation') {
+    return Math.max(MIN_CONSULTATION_PRICE_INR, computedAmount)
+  }
+
+  return computedAmount
 }
 
 const loadRazorpayCheckout = () => {
