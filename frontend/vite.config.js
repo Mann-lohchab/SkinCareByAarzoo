@@ -4,7 +4,7 @@ import process from 'node:process'
 
 // https://vite.dev/config/
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? process.env.VITE_BASE_PATH || '/SkinCareByAarzoo/' : '/',
+  base: command === 'build' ? process.env.VITE_BASE_PATH || '/' : '/',
   plugins: [react()],
   build: {
     chunkSizeWarningLimit: 3000,

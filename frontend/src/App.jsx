@@ -14,7 +14,11 @@ import 'react-toastify/dist/ReactToastify.css'
 import { useStore } from './zustnd/store'
 import { apiClient } from './lib/config'
 
-const routerBaseName = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
+const configuredBaseName = import.meta.env.BASE_URL.replace(/\/$/, '')
+const routerBaseName =
+  configuredBaseName && window.location.pathname.startsWith(configuredBaseName)
+    ? configuredBaseName
+    : '/'
 
 function App() {
   const { user, setUser } = useStore()
