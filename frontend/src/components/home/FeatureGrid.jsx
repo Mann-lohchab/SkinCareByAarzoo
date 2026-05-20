@@ -58,7 +58,7 @@ export function FeatureGrid() {
               style={{ '--reveal-delay': `${index * 0.08}s` }}
             >
               <div className="lux-feature-media">
-                <img src={feature.image} alt={feature.title} loading="lazy" />
+                <img src={feature.image} alt={feature.title} />
               </div>
               <div className="lux-feature-copy">
                 <h3>{feature.title}</h3>
