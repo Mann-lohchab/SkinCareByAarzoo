@@ -14,6 +14,8 @@ import 'react-toastify/dist/ReactToastify.css'
 import { useStore } from './zustnd/store'
 import { apiClient } from './lib/config'
 
+const routerBaseName = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
+
 function App() {
   const { user, setUser } = useStore()
   const [isLoading, setIsLoading] = useState(true)
@@ -58,7 +60,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBaseName}>
       <Routes>
         <Route path='/' element={<Home/>} />
         <Route path='/login' element={user ? <Navigate to="/dashboard"/> : <Login/>}/>
