@@ -1,6 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { toast } from 'react-toastify'
 import {
   StreamVideo,
   StreamVideoClient,
@@ -18,77 +17,96 @@ import { apiClient } from '../lib/config'
 const API_KEY = import.meta.env.VITE_GETSTREAM_API_KEY || 'kjuyb9r35pvr'
 
 function VideoCall() {
-  const { user, setUser } = useStore()
+  const { user } = useStore()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const callId = searchParams.get('callId')
   
   const [client, setClient] = useState(null)
   const [call, setCall] = useState(null)
-  const [token, setToken] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [permissionState, setPermissionState] = useState('idle')
+  const clientRef = useRef(null)
+  const callRef = useRef(null)
 
   useEffect(() => {
     if (!user) {
       navigate('/login')
+    }
+  }, [user, navigate])
+
+  useEffect(() => {
+    return () => {
+      if (callRef.current) {
+        callRef.current.leave().catch(console.error)
+      }
+      if (clientRef.current) {
+        clientRef.current.disconnectUser().catch(console.error)
+      }
+    }
+  }, [])
+
+  const setupVideoCall = async () => {
+    if (!callId) {
+      setError('No call selected')
       return
     }
 
-    const setupVideoCall = async () => {
-      try {
-        // Get token from backend
-        const res = await apiClient.get('/auth/video-call/token')
-        
-        if (res.data.validate) {
-          setToken(res.data.token)
-          
-          // Create Stream Video client
-          const newClient = new StreamVideoClient({
-            apiKey: API_KEY,
-            user: {
-              id: res.data.userId,
-              name: user.fullname || user.email,
-            },
-            token: res.data.token,
-          })
-          
-          setClient(newClient)
-          
-          // Join or create call
-          if (callId) {
-            const newCall = newClient.call('default', callId)
-            
-            try {
-              await newCall.join({ create: true })
-            } catch (joinErr) {
-              console.log('Join error:', joinErr)
-              // Try to get existing call
-              await newCall.get()
-            }
-            
-            setCall(newCall)
-          }
-        }
-      } catch (err) {
-        console.error('Setup error:', err)
-        setError(err.message || 'Failed to setup video call')
-      } finally {
-        setLoading(false)
-      }
-    }
+    setError(null)
+    setLoading(true)
+    setPermissionState('requesting')
 
-    setupVideoCall()
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera and microphone access is not supported in this browser.')
+      }
 
-    return () => {
-      if (call) {
-        call.leave().catch(console.error)
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      })
+      mediaStream.getTracks().forEach((track) => track.stop())
+      setPermissionState('granted')
+
+      const res = await apiClient.get('/auth/video-call/token')
+
+      if (!res.data.validate) {
+        throw new Error(res.data.message || 'Unable to authorize video call')
       }
-      if (client) {
-        client.disconnectUser().catch(console.error)
-      }
+
+      const newClient = new StreamVideoClient({
+        apiKey: res.data.apiKey || API_KEY,
+        user: {
+          id: res.data.userId,
+          name: user.fullname || user.email,
+        },
+        token: res.data.token,
+      })
+
+      const newCall = newClient.call('default', callId)
+      await newCall.join({ create: true })
+
+      clientRef.current = newClient
+      callRef.current = newCall
+      setClient(newClient)
+      setCall(newCall)
+    } catch (err) {
+      console.error('Setup error:', err)
+      const permissionDenied =
+        err.name === 'NotAllowedError' ||
+        err.name === 'PermissionDeniedError'
+
+      setPermissionState(permissionDenied ? 'denied' : 'idle')
+      setError(
+        permissionDenied
+          ? 'Camera and microphone permission is required to join this video call.'
+          : err.message || 'Failed to setup video call'
+      )
+    } finally {
+      setLoading(false)
     }
-  }, [callId])
+  }
 
   const handleLeave = useCallback(() => {
     navigate(-1)
@@ -98,54 +116,116 @@ function VideoCall() {
     return (
       <>
         <Navbar />
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '80vh',
-          flexDirection: 'column'
+        <div style={{
+          minHeight: '80vh',
+          display: 'grid',
+          placeItems: 'center',
+          padding: '24px',
+          background: '#f5f7fb',
         }}>
-          <h2>Loading video call...</h2>
+          <div style={{
+            maxWidth: '480px',
+            width: '100%',
+            padding: '28px',
+            borderRadius: '18px',
+            background: '#ffffff',
+            boxShadow: '0 24px 70px rgba(15, 23, 42, 0.12)',
+            textAlign: 'center',
+          }}>
+            <h2 style={{ marginBottom: '8px', color: '#0f172a' }}>
+              {permissionState === 'requesting' ? 'Waiting for permission...' : 'Joining video call...'}
+            </h2>
+            <p style={{ color: '#64748b' }}>
+              Allow camera and microphone access in your browser prompt.
+            </p>
+          </div>
         </div>
       </>
     )
   }
 
-  if (error) {
+  if (error || !client || !call) {
     return (
       <>
         <Navbar />
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '80vh',
-          flexDirection: 'column'
+        <div style={{
+          minHeight: '100vh',
+          padding: '132px 20px 48px',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)',
+          display: 'grid',
+          placeItems: 'center',
         }}>
-          <h2 style={{ color: 'red' }}>Error: {error}</h2>
-          <button onClick={() => navigate(-1)} className="btn-primary">
-            Go Back
-          </button>
-        </div>
-      </>
-    )
-  }
-
-  if (!client || !call) {
-    return (
-      <>
-        <Navbar />
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '80vh',
-          flexDirection: 'column'
-        }}>
-          <h2>No call selected</h2>
-          <button onClick={() => navigate(-1)} className="btn-primary">
-            Go Back
-          </button>
+          <div style={{
+            maxWidth: '520px',
+            width: '100%',
+            padding: '32px',
+            borderRadius: '22px',
+            background: '#ffffff',
+            boxShadow: '0 30px 80px rgba(15, 23, 42, 0.16)',
+            border: '1px solid rgba(148, 163, 184, 0.26)',
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '16px',
+              background: '#e0f2fe',
+              color: '#0369a1',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: '24px',
+              marginBottom: '20px',
+            }}>
+              camera
+            </div>
+            <h2 style={{ margin: '0 0 10px', color: '#0f172a', fontSize: '1.65rem' }}>
+              Join video consultation
+            </h2>
+            <p style={{ margin: '0 0 18px', color: '#475569', lineHeight: 1.6 }}>
+              Click below to let this site ask for camera and microphone permission before joining the call.
+            </p>
+            {error && (
+              <p style={{
+                margin: '0 0 18px',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                background: '#fef2f2',
+                color: '#b91c1c',
+                fontWeight: 600,
+              }}>
+                {error}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                onClick={setupVideoCall}
+                style={{
+                  border: '0',
+                  borderRadius: '12px',
+                  background: '#2563eb',
+                  color: '#ffffff',
+                  padding: '12px 18px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Enable camera and microphone
+              </button>
+              <button
+                onClick={() => navigate(-1)}
+                style={{
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '12px',
+                  background: '#ffffff',
+                  color: '#334155',
+                  padding: '12px 18px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Go back
+              </button>
+            </div>
+          </div>
         </div>
       </>
     )

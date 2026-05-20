@@ -1,16 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 .home-luxury-page {
-  --lux-bg: #f8f1e9;
-  --lux-surface: #fff9f4;
-  --lux-surface-2: #fff5ef;
-  --lux-ink: #231914;
-  --lux-muted: #6f5f56;
-  --lux-accent: #cb7e62;
-  --lux-accent-deep: #a95d44;
-  --lux-border: rgba(70, 43, 30, 0.16);
+  --lux-bg: #fbf7f1;
+  --lux-surface: #fffdf9;
+  --lux-surface-2: #f4eee6;
+  --lux-ink: #201915;
+  --lux-muted: #6e635c;
+  --lux-accent: #c4795f;
+  --lux-accent-deep: #8f4e3c;
+  --lux-sage: #697c66;
+  --lux-plum: #463141;
+  --lux-border: rgba(60, 48, 38, 0.14);
   color: var(--lux-ink);
-  background: linear-gradient(180deg, #f5ede6 0%, #fdf9f4 44%, #f6ede5 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(251, 247, 241, 0.92) 42%, rgba(244, 238, 230, 0.86) 100%),
+    radial-gradient(circle at 12% 18%, rgba(105, 124, 102, 0.13), transparent 28%),
+    radial-gradient(circle at 86% 58%, rgba(143, 78, 60, 0.1), transparent 30%),
+    var(--lux-bg);
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   overflow-x: clip;
 }
@@ -71,7 +77,7 @@
 .lux-brand-mark {
   width: 44px;
   height: 44px;
-  border-radius: 14px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -115,7 +121,7 @@
   align-items: center;
   gap: 4px;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(6px);
 }
@@ -126,7 +132,7 @@
 
 .lux-nav-link {
   padding: 9px 14px;
-  border-radius: 999px;
+  border-radius: 7px;
   font-size: 0.84rem;
   font-weight: 500;
   letter-spacing: 0.01em;
@@ -150,7 +156,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 11px 18px;
   border: 1px solid rgba(255, 255, 255, 0.55);
   background: rgba(255, 255, 255, 0.94);
@@ -174,7 +180,7 @@
   border: 1px solid rgba(255, 255, 255, 0.66);
   background: rgba(255, 255, 255, 0.22);
   color: #fff;
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 9px 16px;
   font-size: 0.75rem;
   font-weight: 700;
@@ -194,8 +200,8 @@
 
 .lux-hero {
   position: relative;
-  min-height: 95vh;
-  padding: 138px 0 74px;
+  min-height: 92vh;
+  padding: 136px 0 84px;
   display: flex;
   align-items: flex-end;
   overflow: hidden;
@@ -216,8 +222,8 @@
 
 .lux-hero-overlay {
   background:
-    linear-gradient(102deg, rgba(18, 10, 6, 0.76) 15%, rgba(20, 11, 7, 0.48) 40%, rgba(23, 14, 10, 0.2) 68%, rgba(24, 15, 10, 0.36) 100%),
-    linear-gradient(180deg, rgba(22, 12, 7, 0.3) 0%, rgba(16, 9, 6, 0.56) 100%);
+    linear-gradient(105deg, rgba(15, 10, 8, 0.82) 8%, rgba(26, 18, 14, 0.58) 42%, rgba(33, 28, 23, 0.2) 70%, rgba(21, 16, 12, 0.48) 100%),
+    linear-gradient(180deg, rgba(17, 12, 10, 0.34) 0%, rgba(16, 11, 8, 0.62) 100%);
 }
 
 .lux-hero-content {
@@ -230,7 +236,7 @@
   margin-top: 14px;
   font-size: clamp(3.1rem, 7vw, 6.6rem);
   line-height: 0.9;
-  letter-spacing: -0.042em;
+  letter-spacing: 0;
   color: #ffffff;
   max-width: 10ch;
 }
@@ -256,7 +262,7 @@
   align-items: center;
   justify-content: center;
   padding: 13px 22px;
-  border-radius: 999px;
+  border-radius: 8px;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.09em;
@@ -265,9 +271,10 @@
 }
 
 .lux-btn-primary {
-  background: linear-gradient(140deg, #f7e3d9, #fdf6f1);
-  color: #33221c;
-  border: 1px solid rgba(255, 255, 255, 0.48);
+  background: #fff7ee;
+  color: #2f211c;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  box-shadow: 0 16px 34px rgba(27, 18, 13, 0.2);
 }
 
 .lux-btn-secondary {
@@ -287,7 +294,7 @@
 .lux-floating-card {
   position: absolute;
   padding: 10px 14px;
-  border-radius: 16px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.24);
   background: rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(12px);
@@ -314,11 +321,11 @@
 }
 
 .lux-section {
-  padding: 94px 0;
+  padding: 88px 0;
 }
 
 .lux-about {
-  padding-top: 78px;
+  padding-top: 82px;
 }
 
 .lux-about-grid {
@@ -332,7 +339,7 @@
   margin-top: 14px;
   font-size: clamp(2.1rem, 4vw, 3.6rem);
   line-height: 0.98;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   max-width: 14ch;
 }
 
@@ -346,16 +353,16 @@
 
 .lux-about-panel {
   border: 1px solid var(--lux-border);
-  border-radius: 26px;
-  background: linear-gradient(160deg, var(--lux-surface), #ffffff);
-  box-shadow: 0 20px 36px rgba(47, 30, 21, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 253, 249, 0.86);
+  box-shadow: 0 20px 48px rgba(47, 30, 21, 0.08);
   padding: 26px;
   display: grid;
   gap: 16px;
 }
 
 .lux-principle-item {
-  border-radius: 18px;
+  border-radius: 8px;
   background: #fff;
   border: 1px solid rgba(64, 38, 25, 0.1);
   padding: 18px;
@@ -389,7 +396,7 @@
   margin-top: 12px;
   font-size: clamp(1.8rem, 3.3vw, 3rem);
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   max-width: 15ch;
 }
 
@@ -407,11 +414,11 @@
 }
 
 .lux-feature-card {
-  border-radius: 24px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--lux-border);
   background: #fff;
-  box-shadow: 0 16px 30px rgba(57, 34, 22, 0.08);
+  box-shadow: 0 18px 36px rgba(57, 34, 22, 0.08);
   transition: transform 0.26s ease, box-shadow 0.26s ease;
 }
 
@@ -421,19 +428,19 @@
 }
 
 .lux-feature-card:nth-child(1) {
-  background: #fff1ea;
+  background: #fff8f0;
 }
 
 .lux-feature-card:nth-child(2) {
-  background: #fff7f0;
+  background: #f4f7ef;
 }
 
 .lux-feature-card:nth-child(3) {
-  background: #fdf4ef;
+  background: #fbf4f6;
 }
 
 .lux-feature-card:nth-child(4) {
-  background: #fff4ed;
+  background: #f6f2ea;
 }
 
 .lux-feature-media {
@@ -486,7 +493,7 @@
   margin-top: 12px;
   font-size: clamp(2rem, 3.8vw, 3.3rem);
   line-height: 0.98;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   max-width: 14ch;
 }
 
@@ -498,9 +505,9 @@
 }
 
 .lux-result-card {
-  border-radius: 22px;
+  border-radius: 8px;
   border: 1px solid var(--lux-border);
-  background: linear-gradient(160deg, #ffffff, var(--lux-surface-2));
+  background: rgba(255, 253, 249, 0.88);
   box-shadow: 0 14px 30px rgba(57, 35, 24, 0.08);
   padding: 22px;
 }
@@ -509,7 +516,7 @@
   font-size: 1.45rem;
   font-weight: 800;
   color: var(--lux-accent-deep);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .lux-result-card h3 {
@@ -523,6 +530,65 @@
   color: var(--lux-muted);
   font-size: 0.93rem;
   line-height: 1.65;
+}
+
+.lux-testimonials {
+  padding-top: 28px;
+  padding-bottom: 72px;
+}
+
+.lux-testimonials-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.lux-testimonials-header h2 {
+  margin-top: 12px;
+  max-width: 18ch;
+  font-size: clamp(1.65rem, 2.7vw, 2.55rem);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.lux-testimonial-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.lux-testimonial-card {
+  min-height: 210px;
+  border: 1px solid var(--lux-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(251, 246, 239, 0.86)),
+    var(--lux-surface);
+  box-shadow: 0 14px 30px rgba(49, 35, 26, 0.07);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 22px;
+}
+
+.lux-testimonial-quote {
+  color: #3e312c;
+  font-size: 0.96rem;
+  line-height: 1.65;
+}
+
+.lux-testimonial-card h3 {
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+
+.lux-testimonial-card div p {
+  margin-top: 5px;
+  color: var(--lux-muted);
+  font-size: 0.82rem;
 }
 
 .lux-footer {
@@ -569,11 +635,19 @@
   .lux-feature-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .lux-testimonial-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
   .home-luxury-shell {
     width: min(1180px, calc(100% - 34px));
+  }
+
+  .lux-navbar {
+    padding: 12px 0;
   }
 
   .lux-nav-toggle {
@@ -588,7 +662,7 @@
     right: 0;
     left: 0;
     margin-left: 0;
-    border-radius: 20px;
+    border-radius: 8px;
     border: 1px solid rgba(73, 44, 30, 0.16);
     background: rgba(250, 244, 238, 0.96);
     backdrop-filter: blur(12px);
@@ -647,41 +721,84 @@
   .lux-results-grid {
     grid-template-columns: 1fr;
   }
+
+  .lux-testimonials-header {
+    display: block;
+  }
 }
 
 @media (max-width: 720px) {
+  .home-luxury-shell {
+    width: min(100% - 28px, 1180px);
+  }
+
+  .lux-brand {
+    gap: 9px;
+    min-width: 0;
+  }
+
+  .lux-brand-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .lux-brand-mark img {
+    width: 29px;
+    height: 29px;
+  }
+
+  .lux-brand-title {
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.82rem;
+  }
+
   .lux-brand-subtitle {
     display: none;
   }
 
   .lux-hero {
-    min-height: 92vh;
-    padding-top: 128px;
+    min-height: 88vh;
+    padding: 104px 0 48px;
+    align-items: flex-end;
+  }
+
+  .lux-hero-media img {
+    object-position: 58% center;
+  }
+
+  .lux-hero-overlay {
+    background:
+      linear-gradient(180deg, rgba(17, 12, 9, 0.44) 0%, rgba(15, 10, 8, 0.78) 78%),
+      linear-gradient(100deg, rgba(12, 8, 6, 0.7) 0%, rgba(19, 12, 9, 0.34) 100%);
   }
 
   .lux-hero-content h1 {
-    font-size: clamp(2.5rem, 13vw, 4.3rem);
+    font-size: clamp(2.45rem, 12vw, 4.15rem);
+    line-height: 0.96;
+    max-width: 11ch;
   }
 
   .lux-hero-content p {
     font-size: 0.98rem;
-    max-width: 34ch;
+    max-width: 32ch;
+  }
+
+  .lux-hero-actions {
+    align-items: stretch;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .lux-btn {
+    width: 100%;
+    min-height: 46px;
+    padding: 12px 14px;
   }
 
   .lux-floating-card {
-    font-size: 0.68rem;
-    letter-spacing: 0.04em;
-    padding: 9px 12px;
-  }
-
-  .lux-floating-card.card-1 {
-    top: auto;
-    bottom: 34%;
-    right: 6%;
-  }
-
-  .lux-floating-card.card-2,
-  .lux-floating-card.card-3 {
     display: none;
   }
 
@@ -693,12 +810,84 @@
     grid-template-columns: 1fr;
   }
 
+  .lux-section {
+    padding: 58px 0;
+  }
+
+  .lux-about {
+    padding-top: 58px;
+  }
+
+  .lux-about-grid,
+  .lux-feature-header {
+    gap: 22px;
+  }
+
+  .lux-about-copy h2,
+  .lux-feature-header h2,
+  .lux-results-header h2,
+  .lux-testimonials-header h2 {
+    max-width: 100%;
+  }
+
+  .lux-about-panel {
+    padding: 16px;
+  }
+
+  .lux-feature-media {
+    aspect-ratio: 16 / 10;
+  }
+
+  .lux-result-card,
+  .lux-testimonial-card {
+    padding: 18px;
+  }
+
+  .lux-testimonial-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lux-testimonials {
+    padding-top: 20px;
+    padding-bottom: 52px;
+  }
+
   .lux-footer-row {
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
     padding: 16px 0;
   }
+}
+
+@media (max-width: 420px) {
+  .home-luxury-shell {
+    width: min(100% - 22px, 1180px);
+  }
+
+  .lux-navbar-row {
+    gap: 10px;
+  }
+
+  .lux-nav-toggle {
+    padding: 8px 11px;
+    font-size: 0.68rem;
+  }
+
+  .lux-hero {
+    min-height: 86vh;
+    padding-bottom: 38px;
+  }
+
+  .lux-hero-content h1 {
+    font-size: clamp(2.25rem, 12.5vw, 3.1rem);
+  }
+
+  .lux-kicker {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+  }
+
 }
 
 @media (prefers-reduced-motion: reduce) {

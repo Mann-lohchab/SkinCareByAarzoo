@@ -34,6 +34,27 @@ const outcomes = [
   },
 ]
 
+const testimonials = [
+  {
+    quote:
+      'My routine finally feels calm and intentional. The plan was simple to follow, and my skin stopped reacting to every change.',
+    name: 'Riya M.',
+    detail: 'Sensitive skin protocol',
+  },
+  {
+    quote:
+      'The consultation helped me understand what my skin actually needed instead of buying another random product.',
+    name: 'Ananya S.',
+    detail: 'Barrier repair plan',
+  },
+  {
+    quote:
+      'I liked how minimal the routine was. It felt premium, personal, and realistic for everyday life.',
+    name: 'Mehak K.',
+    detail: 'Personalized skincare plan',
+  },
+]
+
 function Home() {
   useEffect(() => {
     const revealNodes = document.querySelectorAll('[data-reveal]')
@@ -102,6 +123,32 @@ function Home() {
                   <p className="lux-result-value">{item.value}</p>
                   <h3>{item.title}</h3>
                   <p>{item.detail}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="testimonials" className="lux-section lux-testimonials">
+          <div className="home-luxury-shell">
+            <header className="lux-testimonials-header" data-reveal>
+              <span className="lux-kicker">Client Notes</span>
+              <h2>Small routines. Clearer skin stories.</h2>
+            </header>
+
+            <div className="lux-testimonial-grid">
+              {testimonials.map((item, index) => (
+                <article
+                  key={item.name}
+                  className="lux-testimonial-card"
+                  data-reveal
+                  style={{ '--reveal-delay': `${index * 0.08}s` }}
+                >
+                  <p className="lux-testimonial-quote">"{item.quote}"</p>
+                  <div>
+                    <h3>{item.name}</h3>
+                    <p>{item.detail}</p>
+                  </div>
                 </article>
               ))}
             </div>

@@ -215,7 +215,7 @@ function VideoCallBooking() {
         toast.success('Booking cancelled')
         fetchBookings()
       }
-    } catch (err) {
+    } catch {
       toast.error('Error cancelling booking')
     }
   }

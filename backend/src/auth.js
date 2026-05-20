@@ -5,7 +5,6 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { sendOTPEmail } from "./controller/sendotp.js";
 import { v4 as uuidv4 } from "uuid";
-import { StreamChat } from "stream-chat";
 import { StreamVideoClient } from "@stream-io/video-client";
 import { loadEnv } from "./env.js";
 import { upsertStreamUser } from "./lib/stream.js";
@@ -20,9 +19,6 @@ loadEnv();
 // GetStream configuration
 const GETSTREAM_API_KEY = process.env.GETSTREAM_API_KEY || "-1417325";
 const GETSTREAM_API_SECRET = process.env.GETSTREAM_API_SECRET || "bmsndsx5dq22fnw64bvnv54cw8kqfnhhjzdgwdh5nhye2g4gyqd8w8jfd5ttpm9x";
-
-// Initialize Stream Chat client
-const streamClient = StreamChat.getInstance(GETSTREAM_API_KEY, GETSTREAM_API_SECRET);
 
 // Initialize Stream Video client (server-side)
 let streamVideoClient;
@@ -489,16 +485,21 @@ router.get("/user", checkauth, async (req, res) => {
   }
 });
 
-// Get Stream Chat token for video calls
+// Get Stream Video token for video calls
 router.get("/video-call/token", checkauth, async (req, res) => {
   try {
     const user = req.user;
     
-    // Create or get Stream Chat user
     const streamUserId = `user_${user.email.replace(/[^a-zA-Z0-9]/g, '_')}`;
-    
-    // Generate Stream Chat token
-    const token = streamClient.createToken(streamUserId, Math.floor(Date.now() / 1000) + 3600); // 1 hour expiry
+    const token = jwt.sign(
+      {
+        sub: streamUserId,
+        user_id: streamUserId,
+        api_key: GETSTREAM_API_KEY,
+      },
+      GETSTREAM_API_SECRET,
+      { algorithm: "HS256", expiresIn: "1h" }
+    );
     
     res.send({ 
       validate: true, 
@@ -978,40 +979,6 @@ router.put("/admin/update-role", checkauth, async (req, res) => {
   }
 });
 
-
-// export router
-// Get video call token for Stream
-router.get("/video-call/token", checkauth, async (req, res) => {
-  try {
-    const user = req.user;
-    
-    console.log("Token request for user:", user.email);
-    
-    // Generate token using JWT with proper Stream Video format
-    // Stream Video requires: user_id, api_key, and optionally exp
-    const token = jwt.sign(
-      { 
-        sub: user.email.toString(),
-        user_id: user.email.toString(),
-        api_key: GETSTREAM_API_KEY
-      },
-      GETSTREAM_API_SECRET,
-      { algorithm: 'HS256', expiresIn: '1h' }
-    );
-    
-    console.log("Generated token successfully");
-    
-    res.send({
-      validate: true,
-      token: token,
-      apiKey: GETSTREAM_API_KEY,
-      userId: user.email
-    });
-  } catch (err) {
-    console.error("Error generating video token:", err);
-    res.status(500).send({ validate: false, message: "Error generating video token: " + err.message });
-  }
-});
 
 export default router;
 export { checkauth, db, getUserByEmail };

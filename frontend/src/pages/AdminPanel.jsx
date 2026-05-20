@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import '../style/Dashboard.css'
@@ -14,6 +14,19 @@ function AdminPanel() {
   const [bookings, setBookings] = useState([])
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+
+  const bookingStats = useMemo(() => ({
+    total: bookings.length,
+    pending: bookings.filter((booking) => booking.status === 'pending').length,
+    confirmed: bookings.filter((booking) => booking.status === 'confirmed').length,
+    completed: bookings.filter((booking) => booking.status === 'completed').length,
+  }), [bookings])
+
+  const userStats = useMemo(() => ({
+    total: users.length,
+    admins: users.filter((u) => u.role === 'admin').length,
+    members: users.filter((u) => u.role !== 'admin').length,
+  }), [users])
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -98,7 +111,7 @@ function AdminPanel() {
         }
         fetchData()
       }
-    } catch (err) {
+    } catch {
       toast.error('Error updating booking')
     }
   }
@@ -110,7 +123,7 @@ function AdminPanel() {
         toast.success('User role updated')
         fetchData()
       }
-    } catch (err) {
+    } catch {
       toast.error('Error updating user role')
     }
   }
@@ -122,11 +135,11 @@ function AdminPanel() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'confirmed': return '#4caf50'
-      case 'pending': return '#ff9800'
-      case 'cancelled': return '#f44336'
-      case 'completed': return '#2196f3'
-      default: return '#9e9e9e'
+      case 'confirmed': return '#16a34a'
+      case 'pending': return '#d97706'
+      case 'cancelled': return '#dc2626'
+      case 'completed': return '#2563eb'
+      default: return '#64748b'
     }
   }
 
@@ -135,7 +148,10 @@ function AdminPanel() {
       <Navbar />
       <div className='admin-container'>
         <div className='admin-header'>
-          <h2>{activeTab === 'bookings' ? 'Video Call Bookings' : 'Manage Users'}</h2>
+          <div>
+            <span className='admin-eyebrow'>Admin workspace</span>
+            <h2>{activeTab === 'bookings' ? 'Video Call Bookings' : 'Manage Users'}</h2>
+          </div>
           <div className='admin-info'>
             <span>Welcome, {user?.fullname}</span>
             <button className='back-btn-admin' onClick={() => navigate('/dashboard')}>Dashboard</button>
@@ -156,6 +172,44 @@ function AdminPanel() {
           >
             Manage Users
           </button>
+        </div>
+
+        <div className='admin-summary-grid'>
+          {activeTab === 'bookings' ? (
+            <>
+              <div className='admin-summary-card'>
+                <span>Total bookings</span>
+                <strong>{bookingStats.total}</strong>
+              </div>
+              <div className='admin-summary-card'>
+                <span>Pending review</span>
+                <strong>{bookingStats.pending}</strong>
+              </div>
+              <div className='admin-summary-card'>
+                <span>Confirmed</span>
+                <strong>{bookingStats.confirmed}</strong>
+              </div>
+              <div className='admin-summary-card'>
+                <span>Completed</span>
+                <strong>{bookingStats.completed}</strong>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className='admin-summary-card'>
+                <span>Total users</span>
+                <strong>{userStats.total}</strong>
+              </div>
+              <div className='admin-summary-card'>
+                <span>Admins</span>
+                <strong>{userStats.admins}</strong>
+              </div>
+              <div className='admin-summary-card'>
+                <span>Members</span>
+                <strong>{userStats.members}</strong>
+              </div>
+            </>
+          )}
         </div>
 
         {loading ? (
@@ -194,7 +248,7 @@ function AdminPanel() {
                     <td>
                       <span 
                         className='status-badge'
-                        style={{backgroundColor: getStatusColor(booking.status), border: '2px solid black'}}
+                        style={{backgroundColor: getStatusColor(booking.status)}}
                       >
                         {booking.status}
                       </span>
@@ -203,18 +257,9 @@ function AdminPanel() {
                       {booking.status === 'confirmed' && booking.stream_session_id ? (
                         <button 
                           onClick={() => navigate(`/video-call?callId=${booking.stream_session_id}`)}
-                          style={{
-                            display: 'inline-block',
-                            padding: '8px 12px',
-                            background: '#4caf50',
-                            color: 'white',
-                            border: '2px solid black',
-                            fontWeight: 'bold',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
+                          className='btn-join-admin'
                         >
-                          🎥 Join Video Call
+                          Join Video Call
                         </button>
                       ) : (
                         <div className='action-buttons'>
@@ -272,7 +317,7 @@ function AdminPanel() {
                     <td>{u.fullname}</td>
                     <td>{u.email}</td>
                     <td>
-                      <span className={`role-badge ${u.role}`} style={{border: '2px solid black'}}>
+                      <span className={`role-badge ${u.role}`}>
                         {u.role}
                       </span>
                     </td>
@@ -307,101 +352,166 @@ function AdminPanel() {
       <style>{`
         .admin-container {
           min-height: 100vh;
-          background-color: #F5F7FF;
-          padding: 20px;
-          font-family: 'Roboto Mono', 'Courier New', monospace;
+          background:
+            radial-gradient(circle at top left, rgba(37, 99, 235, 0.1), transparent 32rem),
+            linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+          padding: 132px 20px 48px;
+          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         
         .admin-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 24px;
           max-width: 1280px;
           margin-left: auto;
           margin-right: auto;
-          padding: 20px;
+          padding: 0;
+        }
+
+        .admin-eyebrow {
+          display: inline-flex;
+          margin-bottom: 8px;
+          color: #2563eb;
+          font-size: 0.76rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
         }
         
         .admin-header h2 {
           margin: 0;
-          font-size: 2rem;
+          font-size: clamp(2rem, 4vw, 3.25rem);
           font-weight: 800;
-          color: #0A0A0A;
-          letter-spacing: -0.03em;
+          color: #0f172a;
+          letter-spacing: 0;
+          line-height: 1.05;
         }
         
         .admin-info {
           display: flex;
           align-items: center;
-          gap: 15px;
+          gap: 12px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          color: #475569;
+          font-size: 0.95rem;
+          font-weight: 700;
+        }
+
+        .back-btn-admin,
+        .logout-btn-admin,
+        .nav-tab,
+        .btn-confirm,
+        .btn-promote,
+        .btn-cancel,
+        .btn-demote,
+        .btn-complete,
+        .btn-join-admin {
+          border: 0;
+          border-radius: 10px;
+          cursor: pointer;
+          font-weight: 700;
+          font-family: inherit;
+          transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+        }
+
+        .back-btn-admin, .logout-btn-admin {
+          padding: 10px 16px;
+          box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
         }
 
         .back-btn-admin {
-          padding: 10px 20px;
-          background: #1E3A8A;
-          color: white;
-          border: 3px solid black;
-          box-shadow: 4px 4px 0px black;
-          cursor: pointer;
-          font-weight: 700;
-          font-family: 'Roboto Mono', monospace;
-        }
-
-        .back-btn-admin:hover {
-          transform: translate(-2px, -2px);
-          box-shadow: 6px 6px 0px black;
+          background: #ffffff;
+          color: #0f172a;
+          border: 1px solid rgba(148, 163, 184, 0.34);
         }
         
         .logout-btn-admin {
-          padding: 10px 20px;
-          background: #f44336;
+          background: #dc2626;
           color: white;
-          border: 3px solid black;
-          box-shadow: 4px 4px 0px black;
-          cursor: pointer;
-          font-weight: 700;
-          font-family: 'Roboto Mono', monospace;
         }
         
-        .logout-btn-admin:hover {
-          transform: translate(-2px, -2px);
-          box-shadow: 6px 6px 0px black;
+        .back-btn-admin:hover,
+        .logout-btn-admin:hover,
+        .nav-tab:hover,
+        .btn-confirm:hover,
+        .btn-promote:hover,
+        .btn-cancel:hover,
+        .btn-demote:hover,
+        .btn-complete:hover,
+        .btn-join-admin:hover {
+          transform: translateY(-1px);
         }
         
         .admin-nav-tabs {
           display: flex;
-          gap: 10px;
-          margin-bottom: 20px;
+          gap: 8px;
+          margin-bottom: 18px;
           max-width: 1280px;
           margin-left: auto;
           margin-right: auto;
+          padding: 6px;
+          background: rgba(255, 255, 255, 0.78);
+          border: 1px solid rgba(148, 163, 184, 0.28);
+          border-radius: 16px;
+          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+          width: fit-content;
         }
         
         .nav-tab {
-          padding: 15px 30px;
-          background: white;
-          border: 3px solid black;
-          box-shadow: 4px 4px 0px black;
-          cursor: pointer;
-          font-weight: 700;
+          padding: 12px 18px;
+          background: transparent;
+          color: #475569;
           font-size: 14px;
-          font-family: 'Roboto Mono', monospace;
-          transition: all 0.15s ease;
         }
         
-        .nav-tab:hover, .nav-tab.active {
-          background: #2563EB;
+        .nav-tab.active {
+          background: #2563eb;
           color: white;
-          transform: translate(-2px, -2px);
-          box-shadow: 6px 6px 0px black;
+          box-shadow: 0 12px 24px rgba(37, 99, 235, 0.28);
+        }
+
+        .admin-summary-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 14px;
+          max-width: 1280px;
+          margin: 0 auto 18px;
+        }
+
+        .admin-summary-card {
+          padding: 18px;
+          background: rgba(255, 255, 255, 0.86);
+          border: 1px solid rgba(148, 163, 184, 0.28);
+          border-radius: 18px;
+          box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+        }
+
+        .admin-summary-card span {
+          display: block;
+          color: #64748b;
+          font-size: 0.83rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          margin-bottom: 10px;
+        }
+
+        .admin-summary-card strong {
+          display: block;
+          color: #0f172a;
+          font-size: 2rem;
+          line-height: 1;
         }
         
         .brutalist-table {
-          background: white;
-          border: 3px solid black;
-          box-shadow: 6px 6px 0px black;
-          overflow: hidden;
+          background: rgba(255, 255, 255, 0.94);
+          border: 1px solid rgba(148, 163, 184, 0.28);
+          border-radius: 20px;
+          box-shadow: 0 24px 70px rgba(15, 23, 42, 0.1);
+          overflow: auto;
           max-width: 1280px;
           margin: 0 auto;
         }
@@ -412,17 +522,26 @@ function AdminPanel() {
         }
         
         th {
-          background: #1E3A8A;
-          color: white;
-          padding: 15px;
+          background: #f8fafc;
+          color: #475569;
+          padding: 14px 16px;
           text-align: left;
-          font-weight: 700;
-          border-bottom: 3px solid black;
+          font-size: 0.76rem;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          border-bottom: 1px solid #e2e8f0;
         }
         
         td {
-          padding: 15px;
-          border-bottom: 1px solid #ddd;
+          padding: 16px;
+          border-bottom: 1px solid #edf2f7;
+          color: #1e293b;
+          vertical-align: middle;
+        }
+
+        tbody tr:hover {
+          background: #f8fafc;
         }
         
         tr:last-child td {
@@ -436,11 +555,13 @@ function AdminPanel() {
         
         .user-cell span {
           font-size: 12px;
-          color: #666;
+          color: #64748b;
         }
         
         .status-badge {
-          padding: 5px 12px;
+          display: inline-flex;
+          padding: 6px 10px;
+          border-radius: 999px;
           color: white;
           font-size: 12px;
           font-weight: 700;
@@ -448,69 +569,89 @@ function AdminPanel() {
         }
         
         .role-badge {
-          padding: 5px 12px;
+          display: inline-flex;
+          padding: 6px 10px;
+          border-radius: 999px;
           font-size: 12px;
           text-transform: capitalize;
           font-weight: 700;
         }
         
         .role-badge.admin {
-          background: #4caf50;
-          color: white;
+          background: #dcfce7;
+          color: #166534;
         }
         
         .role-badge.user {
-          background: #9e9e9e;
-          color: white;
+          background: #e2e8f0;
+          color: #334155;
         }
         
         .action-buttons {
           display: flex;
           gap: 8px;
+          flex-wrap: wrap;
         }
         
         .btn-confirm, .btn-promote {
-          background: #4caf50;
-          color: white;
-          border: 2px solid black;
-          padding: 6px 12px;
-          border-radius: 0;
-          cursor: pointer;
+          background: #dcfce7;
+          color: #166534;
+          padding: 8px 12px;
           font-size: 12px;
-          font-weight: 700;
-          font-family: 'Roboto Mono', monospace;
         }
         
         .btn-cancel, .btn-demote {
-          background: #f44336;
-          color: white;
-          border: 2px solid black;
-          padding: 6px 12px;
-          border-radius: 0;
-          cursor: pointer;
+          background: #fee2e2;
+          color: #991b1b;
+          padding: 8px 12px;
           font-size: 12px;
-          font-weight: 700;
-          font-family: 'Roboto Mono', monospace;
         }
         
         .btn-complete {
-          background: #2196f3;
-          color: white;
-          border: 2px solid black;
-          padding: 6px 12px;
-          border-radius: 0;
-          cursor: pointer;
+          background: #dbeafe;
+          color: #1d4ed8;
+          padding: 8px 12px;
           font-size: 12px;
-          font-weight: 700;
-          font-family: 'Roboto Mono', monospace;
+        }
+
+        .btn-join-admin {
+          background: #16a34a;
+          color: #ffffff;
+          padding: 9px 13px;
+          font-size: 12px;
+          box-shadow: 0 10px 22px rgba(22, 163, 74, 0.24);
         }
         
         .loading {
           text-align: center;
-          color: #0A0A0A;
+          color: #475569;
           font-size: 18px;
           padding: 50px;
           font-weight: 700;
+          max-width: 1280px;
+          margin: 0 auto;
+          background: rgba(255, 255, 255, 0.86);
+          border-radius: 18px;
+          border: 1px solid rgba(148, 163, 184, 0.28);
+        }
+
+        @media (max-width: 820px) {
+          .admin-header {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .admin-info {
+            justify-content: flex-start;
+          }
+
+          .admin-nav-tabs {
+            width: 100%;
+          }
+
+          .nav-tab {
+            flex: 1;
+          }
         }
       `}</style>
     </>

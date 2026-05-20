@@ -6,7 +6,9 @@ import '../style/Navbar.css'
 
 export function Navbar() {
   const location = useLocation()
-  const [isOpen, setIsOpen] = useState(false)
+  const routeKey = `${location.pathname}${location.hash}`
+  const [openRouteKey, setOpenRouteKey] = useState(null)
+  const isOpen = openRouteKey === routeKey
 
   const navLinks = [
     { path: '/', label: 'Home' },
@@ -14,10 +16,6 @@ export function Navbar() {
     { path: '#approach', label: 'Approach' },
     { path: '#pillars', label: 'Pillars' },
   ]
-
-  useEffect(() => {
-    setIsOpen(false)
-  }, [location.pathname, location.hash])
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : ''
@@ -78,7 +76,7 @@ export function Navbar() {
             <button
               type="button"
               className="navbar-toggle"
-              onClick={() => setIsOpen((open) => !open)}
+              onClick={() => setOpenRouteKey((current) => (current === routeKey ? null : routeKey))}
               aria-label={isOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isOpen}
             >
@@ -88,7 +86,7 @@ export function Navbar() {
         </div>
       </nav>
 
-      <div className={`navbar-mobile-backdrop ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(false)} />
+      <div className={`navbar-mobile-backdrop ${isOpen ? 'open' : ''}`} onClick={() => setOpenRouteKey(null)} />
 
       <div className={`navbar-mobile-panel ${isOpen ? 'open' : ''}`}>
         <div className="navbar-mobile-links">
@@ -98,7 +96,7 @@ export function Navbar() {
                 key={link.path}
                 href={link.path}
                 className={`navbar-mobile-link ${isActive(link.path) ? 'active' : ''}`}
-                onClick={() => setIsOpen(false)}
+                onClick={() => setOpenRouteKey(null)}
               >
                 {link.label}
               </a>
@@ -107,7 +105,7 @@ export function Navbar() {
                 key={link.path}
                 to={link.path}
                 className={`navbar-mobile-link ${isActive(link.path) ? 'active' : ''}`}
-                onClick={() => setIsOpen(false)}
+                onClick={() => setOpenRouteKey(null)}
               >
                 {link.label}
               </Link>
@@ -115,7 +113,7 @@ export function Navbar() {
           )}
         </div>
 
-        <Link to="/dashboard" className="navbar-mobile-cta" onClick={() => setIsOpen(false)}>
+        <Link to="/dashboard" className="navbar-mobile-cta" onClick={() => setOpenRouteKey(null)}>
           Launch Dashboard
         </Link>
       </div>

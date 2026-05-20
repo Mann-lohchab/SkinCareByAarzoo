@@ -7,6 +7,7 @@ const navLinks = [
   { href: '#about', label: 'About' },
   { href: '#approach', label: 'Approach' },
   { href: '#results', label: 'Results' },
+  { href: '#testimonials', label: 'Reviews' },
 ]
 
 export function LuxuryNavbar() {
