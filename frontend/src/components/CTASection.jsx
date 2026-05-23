@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 export function CTASection() {
   return (
@@ -61,8 +62,8 @@ export function CTASection() {
                 Book a consultation to understand your skin at a deeper level
                 and get a personalized treatment plan.
               </p>
-              <a
-                href="/dashboard"
+              <Link
+                to="/dashboard"
                 style={{
                   display: "inline-block",
                   background: "var(--color-primary-blue)",
@@ -76,7 +77,7 @@ export function CTASection() {
                 }}
               >
                   Book Consultation
-              </a>
+              </Link>
             </div>
 
             {/* Card 2 */}
