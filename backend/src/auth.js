@@ -53,6 +53,7 @@ const EXTRA_15_MIN_PRICE_INR = 349;
 const MIN_CONSULTATION_PRICE_INR = 500;
 const MIN_BOOKING_MINUTES = 15;
 const MAX_BOOKING_MINUTES = 120;
+const BOOKING_STATUSES = new Set(["pending", "confirmed", "cancelled", "completed"]);
 
 // connect to database
 const db = new pg.Client({
@@ -78,8 +79,18 @@ function getRazorpayClient() {
   });
 }
 
-function getBookingAmountInInr(sessionType, duration) {
-  const baseAmount = SESSION_PRICING_INR[sessionType] || SESSION_PRICING_INR.consultation;
+async function getPricingOverrides() {
+  const result = await db.query("SELECT pricing_key, amount_in_inr FROM custom_pricing");
+  const overrides = {};
+  for (const row of result.rows) {
+    overrides[row.pricing_key] = Number(row.amount_in_inr);
+  }
+  return overrides;
+}
+
+async function getBookingAmountInInr(sessionType, duration) {
+  const overrides = await getPricingOverrides();
+  const baseAmount = overrides[sessionType] || SESSION_PRICING_INR[sessionType] || SESSION_PRICING_INR.consultation;
   const extraBlocks = Math.max(0, Math.ceil((duration - BASE_DURATION_MINUTES) / 15));
   const computedAmount = baseAmount + extraBlocks * EXTRA_15_MIN_PRICE_INR;
 
@@ -119,7 +130,6 @@ function parseBookingPayload(payload = {}) {
     sessionType,
     duration,
     scheduledDate,
-    amountInInr: getBookingAmountInInr(sessionType, duration),
     sessionLabel: SESSION_TYPE_LABELS[sessionType] || sessionType,
   };
 }
@@ -152,6 +162,16 @@ async function initializeDatabase() {
           role VARCHAR(20) DEFAULT 'user',
           stream_token TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+  `);
+
+  await db.query(`
+      CREATE TABLE IF NOT EXISTS custom_pricing (
+          id SERIAL PRIMARY KEY,
+          pricing_key VARCHAR(50) UNIQUE NOT NULL,
+          amount_in_inr INTEGER NOT NULL CHECK (amount_in_inr > 0),
+          updated_by_email VARCHAR(255),
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
   `);
 
@@ -530,9 +550,10 @@ router.post("/video-call/payment/create-order", checkauth, async (req, res) => {
     if (bookingDetails.error) {
       return res.status(400).send({ validate: false, message: bookingDetails.error });
     }
+    const amountInInr = await getBookingAmountInInr(bookingDetails.sessionType, bookingDetails.duration);
 
     const order = await razorpayClient.orders.create({
-      amount: bookingDetails.amountInInr * 100,
+      amount: amountInInr * 100,
       currency: RAZORPAY_CURRENCY,
       receipt: `vc_${Date.now()}_${uuidv4().slice(0, 8)}`,
       notes: {
@@ -554,7 +575,7 @@ router.post("/video-call/payment/create-order", checkauth, async (req, res) => {
         sessionLabel: bookingDetails.sessionLabel,
         scheduledTime: bookingDetails.scheduledDate.toISOString(),
         duration: bookingDetails.duration,
-        amountInInr: bookingDetails.amountInInr,
+        amountInInr,
       },
     });
   } catch (err) {
@@ -587,6 +608,7 @@ router.post("/video-call/payment/verify-and-book", checkauth, async (req, res) =
     if (bookingDetails.error) {
       return res.status(400).send({ validate: false, message: bookingDetails.error });
     }
+    const amountInInr = await getBookingAmountInInr(bookingDetails.sessionType, bookingDetails.duration);
 
     const razorpayClient = getRazorpayClient();
     if (!razorpayClient) {
@@ -621,7 +643,7 @@ router.post("/video-call/payment/verify-and-book", checkauth, async (req, res) =
       });
     }
 
-    if (Number(order.amount) !== bookingDetails.amountInInr * 100) {
+    if (Number(order.amount) !== amountInInr * 100) {
       return res.status(400).send({
         validate: false,
         message: "Paid amount does not match booking amount",
@@ -803,13 +825,26 @@ router.put("/video-call/update-status", checkauth, async (req, res) => {
       return res.status(403).send({ validate: false, message: "Access denied. Admin only." });
     }
     
-    const { bookingId, status } = req.body;
-    
-    let streamSessionId = null;
+    const { bookingId } = req.body;
+    const status = String(req.body?.status || "").trim().toLowerCase();
+    if (!BOOKING_STATUSES.has(status)) {
+      return res.status(400).send({ validate: false, message: "Invalid booking status" });
+    }
+
+    const bookingLookup = await db.query(
+      "SELECT * FROM video_call_bookings WHERE booking_id = $1 LIMIT 1",
+      [bookingId]
+    );
+    if (bookingLookup.rows.length === 0) {
+      return res.status(404).send({ validate: false, message: "Booking not found" });
+    }
+    const existingBooking = bookingLookup.rows[0];
+
+    let streamSessionId = existingBooking.stream_session_id || null;
     let videoCallUrl = null;
     
     // Generate video call when confirming
-    if (status === 'confirmed') {
+    if (status === 'confirmed' && !streamSessionId) {
       const sessionId = `session_${bookingId}_${Date.now()}`;
       
       try {
@@ -861,10 +896,6 @@ router.put("/video-call/update-status", checkauth, async (req, res) => {
       [status, streamSessionId, bookingId]
     );
     
-    if (result.rows.length === 0) {
-      return res.status(404).send({ validate: false, message: "Booking not found" });
-    }
-
     emitRealtimeEvent(
       createRealtimeEvent("booking.updated", {
         booking: result.rows[0],
@@ -925,6 +956,80 @@ router.delete("/video-call/delete/:bookingId", checkauth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send({ validate: false, message: "Error deleting booking" });
+  }
+});
+
+router.get("/admin/pricing", checkauth, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).send({ validate: false, message: "Access denied. Admin only." });
+    }
+
+    const overrides = await getPricingOverrides();
+    const pricing = Object.keys(SESSION_PRICING_INR).map((sessionType) => ({
+      sessionType,
+      sessionLabel: SESSION_TYPE_LABELS[sessionType] || sessionType,
+      defaultPriceInInr: SESSION_PRICING_INR[sessionType],
+      customPriceInInr: overrides[sessionType] || null,
+      effectivePriceInInr: overrides[sessionType] || SESSION_PRICING_INR[sessionType],
+    }));
+
+    res.send({ validate: true, pricing });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ validate: false, message: "Error fetching pricing settings" });
+  }
+});
+
+router.put("/admin/pricing", checkauth, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).send({ validate: false, message: "Access denied. Admin only." });
+    }
+
+    const sessionType = String(req.body?.sessionType || "").trim().toLowerCase();
+    const amountInInr = Number(req.body?.amountInInr);
+    if (!VALID_SESSION_TYPES.has(sessionType)) {
+      return res.status(400).send({ validate: false, message: "Invalid session type" });
+    }
+    if (!Number.isInteger(amountInInr) || amountInInr <= 0) {
+      return res.status(400).send({ validate: false, message: "Price must be a positive integer value in INR" });
+    }
+
+    const result = await db.query(
+      `INSERT INTO custom_pricing (pricing_key, amount_in_inr, updated_by_email, updated_at)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+       ON CONFLICT (pricing_key)
+       DO UPDATE SET amount_in_inr = EXCLUDED.amount_in_inr, updated_by_email = EXCLUDED.updated_by_email, updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [sessionType, amountInInr, req.user.email]
+    );
+
+    res.send({
+      validate: true,
+      message: "Custom pricing saved successfully",
+      pricing: result.rows[0],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ validate: false, message: "Error saving custom pricing" });
+  }
+});
+
+router.get("/video-call/pricing", checkauth, async (_req, res) => {
+  try {
+    const overrides = await getPricingOverrides();
+    const pricing = Object.keys(SESSION_PRICING_INR).map((sessionType) => ({
+      sessionType,
+      sessionLabel: SESSION_TYPE_LABELS[sessionType] || sessionType,
+      defaultPriceInInr: SESSION_PRICING_INR[sessionType],
+      customPriceInInr: overrides[sessionType] || null,
+      effectivePriceInInr: overrides[sessionType] || SESSION_PRICING_INR[sessionType],
+    }));
+    res.send({ validate: true, pricing });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ validate: false, message: "Error fetching pricing" });
   }
 });
 

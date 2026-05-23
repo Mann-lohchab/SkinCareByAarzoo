@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { LuxuryNavbar } from '../components/home/LuxuryNavbar'
 import { HeroSection } from '../components/home/HeroSection'
 import { FeatureGrid } from '../components/home/FeatureGrid'
@@ -56,24 +55,6 @@ const testimonials = [
 ]
 
 function Home() {
-  useEffect(() => {
-    const revealNodes = document.querySelectorAll('[data-reveal]')
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible')
-            observer.unobserve(entry.target)
-          }
-        })
-      },
-      { threshold: 0.18, rootMargin: '0px 0px -8% 0px' }
-    )
-
-    revealNodes.forEach((node) => observer.observe(node))
-    return () => observer.disconnect()
-  }, [])
-
   return (
     <>
       <LuxuryNavbar />
@@ -82,7 +63,7 @@ function Home() {
 
         <section id="about" className="lux-section lux-about">
           <div className="home-luxury-shell lux-about-grid">
-            <div className="lux-about-copy" data-reveal>
+            <div className="lux-about-copy">
               <span className="lux-kicker">Editorial Precision</span>
               <h2>Luxury skincare that is intentional, measured, and built to last.</h2>
               <p>
@@ -92,7 +73,7 @@ function Home() {
               </p>
             </div>
 
-            <div className="lux-about-panel" data-reveal style={{ '--reveal-delay': '0.14s' }}>
+            <div className="lux-about-panel">
               {principles.map((item) => (
                 <article key={item.label} className="lux-principle-item">
                   <h3>{item.label}</h3>
@@ -107,7 +88,7 @@ function Home() {
 
         <section id="results" className="lux-section lux-results">
           <div className="home-luxury-shell">
-            <header className="lux-results-header" data-reveal>
+            <header className="lux-results-header">
               <span className="lux-kicker">Results</span>
               <h2>Skin confidence built through method, not guesswork.</h2>
             </header>
@@ -117,8 +98,6 @@ function Home() {
                 <article
                   key={item.title}
                   className="lux-result-card"
-                  data-reveal
-                  style={{ '--reveal-delay': `${0.08 + index * 0.08}s` }}
                 >
                   <p className="lux-result-value">{item.value}</p>
                   <h3>{item.title}</h3>
@@ -131,7 +110,7 @@ function Home() {
 
         <section id="testimonials" className="lux-section lux-testimonials">
           <div className="home-luxury-shell">
-            <header className="lux-testimonials-header" data-reveal>
+            <header className="lux-testimonials-header">
               <span className="lux-kicker">Client Notes</span>
               <h2>Small routines. Clearer skin stories.</h2>
             </header>
@@ -141,8 +120,6 @@ function Home() {
                 <article
                   key={item.name}
                   className="lux-testimonial-card"
-                  data-reveal
-                  style={{ '--reveal-delay': `${index * 0.08}s` }}
                 >
                   <p className="lux-testimonial-quote">"{item.quote}"</p>
                   <div>

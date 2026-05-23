@@ -13,6 +13,8 @@ function AdminPanel() {
   const [activeTab, setActiveTab] = useState('bookings')
   const [bookings, setBookings] = useState([])
   const [users, setUsers] = useState([])
+  const [pricing, setPricing] = useState([])
+  const [pricingDrafts, setPricingDrafts] = useState({})
   const [loading, setLoading] = useState(true)
 
   const bookingStats = useMemo(() => ({
@@ -43,6 +45,16 @@ function AdminPanel() {
         const res = await apiClient.get('/auth/video-call/all-bookings')
         if (res.data.validate) {
           setBookings(res.data.bookings)
+        }
+      } else if (activeTab === 'pricing') {
+        const res = await apiClient.get('/auth/admin/pricing')
+        if (res.data.validate) {
+          setPricing(res.data.pricing)
+          const nextDrafts = {}
+          for (const item of res.data.pricing) {
+            nextDrafts[item.sessionType] = item.customPriceInInr || item.effectivePriceInInr
+          }
+          setPricingDrafts(nextDrafts)
         }
       } else if (activeTab === 'users') {
         const res = await apiClient.get('/auth/admin/users')
@@ -128,6 +140,24 @@ function AdminPanel() {
     }
   }
 
+  const updateCustomPricing = async (sessionType, amountInInr) => {
+    const parsedAmount = Number(amountInInr)
+    if (!Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+      toast.error('Price must be a positive integer (INR)')
+      return
+    }
+
+    try {
+      const res = await apiClient.put('/auth/admin/pricing', { sessionType, amountInInr: parsedAmount })
+      if (res.data.validate) {
+        toast.success('Custom pricing updated')
+        fetchData()
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error updating pricing')
+    }
+  }
+
   const formatDate = (dateString) => {
     const date = new Date(dateString)
     return date.toLocaleString()
@@ -143,6 +173,9 @@ function AdminPanel() {
     }
   }
 
+  const activeBookings = bookings.filter((booking) => booking.status !== 'completed')
+  const completedBookings = bookings.filter((booking) => booking.status === 'completed')
+
   return (
     <>
       <Navbar />
@@ -150,7 +183,13 @@ function AdminPanel() {
         <div className='admin-header'>
           <div>
             <span className='admin-eyebrow'>Admin workspace</span>
-            <h2>{activeTab === 'bookings' ? 'Video Call Bookings' : 'Manage Users'}</h2>
+            <h2>
+              {activeTab === 'bookings'
+                ? 'Video Call Bookings'
+                : activeTab === 'pricing'
+                  ? 'Custom Pricing'
+                  : 'Manage Users'}
+            </h2>
           </div>
           <div className='admin-info'>
             <span>Welcome, {user?.fullname}</span>
@@ -171,6 +210,12 @@ function AdminPanel() {
             onClick={() => setActiveTab('users')}
           >
             Manage Users
+          </button>
+          <button
+            className={`nav-tab ${activeTab === 'pricing' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pricing')}
+          >
+            Custom Pricing
           </button>
         </div>
 
@@ -194,7 +239,7 @@ function AdminPanel() {
                 <strong>{bookingStats.completed}</strong>
               </div>
             </>
-          ) : (
+          ) : activeTab === 'users' ? (
             <>
               <div className='admin-summary-card'>
                 <span>Total users</span>
@@ -209,32 +254,45 @@ function AdminPanel() {
                 <strong>{userStats.members}</strong>
               </div>
             </>
+          ) : (
+            <>
+              <div className='admin-summary-card'>
+                <span>Session types</span>
+                <strong>{pricing.length}</strong>
+              </div>
+              <div className='admin-summary-card'>
+                <span>Custom prices set</span>
+                <strong>{pricing.filter((item) => item.customPriceInInr).length}</strong>
+              </div>
+            </>
           )}
         </div>
 
         {loading ? (
           <div className='loading'>Loading...</div>
         ) : activeTab === 'bookings' ? (
-          <div className='brutalist-table'>
-            <table>
-              <thead>
-                <tr>
-                  <th>Booking ID</th>
-                  <th>User</th>
-                  <th>Session Type</th>
-                  <th>Scheduled Time</th>
-                  <th>Duration</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookings.length === 0 ? (
+          <>
+            <h3 style={{ maxWidth: '1280px', margin: '0 auto 10px' }}>Active / Pending</h3>
+            <div className='brutalist-table'>
+              <table>
+                <thead>
                   <tr>
-                    <td colSpan="7" style={{textAlign: 'center'}}>No bookings found</td>
+                    <th>Booking ID</th>
+                    <th>User</th>
+                    <th>Session Type</th>
+                    <th>Scheduled Time</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ) : bookings.map((booking) => (
-                  <tr key={booking.booking_id}>
+                </thead>
+                <tbody>
+                  {activeBookings.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{textAlign: 'center'}}>No active/pending bookings found</td>
+                    </tr>
+                  ) : activeBookings.map((booking) => (
+                    <tr key={booking.booking_id}>
                     <td>{booking.booking_id}</td>
                     <td>
                       <div className='user-cell'>
@@ -284,11 +342,103 @@ function AdminPanel() {
                               className='btn-complete'
                               onClick={() => updateBookingStatus(booking.booking_id, 'completed')}
                             >
-                              Complete
+                              Mark as Done
                             </button>
                           )}
                         </div>
                       )}
+                    </td>
+                  </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <h3 style={{ maxWidth: '1280px', margin: '20px auto 10px' }}>Completed</h3>
+            <div className='brutalist-table'>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Booking ID</th>
+                    <th>User</th>
+                    <th>Session Type</th>
+                    <th>Scheduled Time</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {completedBookings.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: 'center' }}>No completed bookings found</td>
+                    </tr>
+                  ) : completedBookings.map((booking) => (
+                    <tr key={booking.booking_id}>
+                      <td>{booking.booking_id}</td>
+                      <td>
+                        <div className='user-cell'>
+                          <strong>{booking.user_name}</strong>
+                          <span>{booking.user_email}</span>
+                        </div>
+                      </td>
+                      <td>{booking.session_type}</td>
+                      <td>{formatDate(booking.scheduled_time)}</td>
+                      <td>{booking.duration} min</td>
+                      <td>
+                        <span className='status-badge' style={{backgroundColor: getStatusColor(booking.status)}}>
+                          {booking.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : activeTab === 'pricing' ? (
+          <div className='brutalist-table'>
+            <table>
+              <thead>
+                <tr>
+                  <th>Session Type</th>
+                  <th>Default Price (INR)</th>
+                  <th>Custom Price (INR)</th>
+                  <th>Effective Price (INR)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pricing.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center' }}>No pricing data found</td>
+                  </tr>
+                ) : pricing.map((item) => (
+                  <tr key={item.sessionType}>
+                    <td>{item.sessionLabel}</td>
+                    <td>{item.defaultPriceInInr}</td>
+                    <td>
+                      <input
+                        type='number'
+                        min='1'
+                        value={pricingDrafts[item.sessionType] || ''}
+                        onChange={(event) => {
+                          setPricingDrafts((prev) => ({
+                            ...prev,
+                            [item.sessionType]: event.target.value,
+                          }))
+                        }}
+                        className='brutalist-input'
+                        style={{ maxWidth: '140px' }}
+                      />
+                    </td>
+                    <td>{item.effectivePriceInInr}</td>
+                    <td>
+                      <button
+                        className='btn-confirm'
+                        onClick={() => updateCustomPricing(item.sessionType, pricingDrafts[item.sessionType])}
+                      >
+                        Save
+                      </button>
                     </td>
                   </tr>
                 ))}

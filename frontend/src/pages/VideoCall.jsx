@@ -47,6 +47,29 @@ function VideoCall() {
     }
   }, [])
 
+  const getMediaErrorMessage = (err) => {
+    if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return 'Camera and microphone need HTTPS. Please open this app in a secure (https) browser context.'
+    }
+
+    switch (err?.name) {
+      case 'NotAllowedError':
+      case 'PermissionDeniedError':
+      case 'SecurityError':
+        return 'Permission denied. Allow camera and microphone access in browser site settings and try again.'
+      case 'NotFoundError':
+      case 'DevicesNotFoundError':
+        return 'No camera or microphone was found. Connect devices and retry.'
+      case 'NotReadableError':
+      case 'TrackStartError':
+        return 'Camera or microphone is already in use by another app or browser tab.'
+      case 'OverconstrainedError':
+        return 'Requested camera/microphone settings are not available on this device.'
+      default:
+        return err?.message || 'Failed to setup video call'
+    }
+  }
+
   const setupVideoCall = async () => {
     if (!callId) {
       setError('No call selected')
@@ -58,6 +81,10 @@ function VideoCall() {
     setPermissionState('requesting')
 
     try {
+      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        throw new Error('Camera and microphone need HTTPS. Please open this app in a secure (https) browser context.')
+      }
+
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error('Camera and microphone access is not supported in this browser.')
       }
@@ -85,7 +112,11 @@ function VideoCall() {
       })
 
       const newCall = newClient.call('default', callId)
-      await newCall.join({ create: true })
+      await newCall.join({
+        create: true,
+        audio: true,
+        video: true,
+      })
 
       clientRef.current = newClient
       callRef.current = newCall
@@ -93,16 +124,9 @@ function VideoCall() {
       setCall(newCall)
     } catch (err) {
       console.error('Setup error:', err)
-      const permissionDenied =
-        err.name === 'NotAllowedError' ||
-        err.name === 'PermissionDeniedError'
-
+      const permissionDenied = ['NotAllowedError', 'PermissionDeniedError', 'SecurityError'].includes(err?.name)
       setPermissionState(permissionDenied ? 'denied' : 'idle')
-      setError(
-        permissionDenied
-          ? 'Camera and microphone permission is required to join this video call.'
-          : err.message || 'Failed to setup video call'
-      )
+      setError(getMediaErrorMessage(err))
     } finally {
       setLoading(false)
     }

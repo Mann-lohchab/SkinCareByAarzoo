@@ -66,7 +66,7 @@ export function Footer() {
           <h4 style={{ color: '#fffaf4', marginBottom: '1rem', fontWeight: 700 }}>Contact</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <a href="mailto:skincare.by.aarzoo@gmail.com" style={{ color: '#c9bdb4', textDecoration: 'none', fontSize: '0.875rem' }}>skincare.by.aarzoo@gmail.com</a>
-            <a href="tel:+919811658943" style={{ color: '#c9bdb4', textDecoration: 'none', fontSize: '0.875rem' }}>+91 9811658943</a>
+            <a href="tel:+919811658943" style={{ color: '#c9bdb4', textDecoration: 'none', fontSize: '0.875rem' }}>+91 92178 52889</a>
             <p style={{ color: '#c9bdb4', fontSize: '0.875rem', marginTop: '0.5rem' }}>
               Available for consultations by appointment
             </p>

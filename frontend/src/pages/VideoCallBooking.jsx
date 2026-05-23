@@ -7,7 +7,7 @@ import { Navbar } from '../components/Navbar'
 import { connectRealtime } from '../lib/realtime'
 import { apiClient } from '../lib/config'
 
-const SESSION_PRICING_INR = {
+const DEFAULT_SESSION_PRICING_INR = {
   consultation: 500,
   technical: 1999,
   followup: 999,
@@ -26,8 +26,8 @@ const formatCurrency = (amount) =>
     maximumFractionDigits: 0,
   }).format(amount)
 
-const getBookingAmount = (sessionType, duration) => {
-  const baseAmount = SESSION_PRICING_INR[sessionType] || SESSION_PRICING_INR.consultation
+const getBookingAmount = (sessionType, duration, pricingMap) => {
+  const baseAmount = pricingMap[sessionType] || pricingMap.consultation || DEFAULT_SESSION_PRICING_INR.consultation
   const extraBlocks = Math.max(0, Math.ceil((Number(duration) - 30) / 15))
   const computedAmount = baseAmount + extraBlocks * EXTRA_15_MIN_PRICE_INR
 
@@ -64,6 +64,7 @@ function VideoCallBooking() {
   const [loadingBookings, setLoadingBookings] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [sessionPricing, setSessionPricing] = useState(DEFAULT_SESSION_PRICING_INR)
   const [formData, setFormData] = useState({
     sessionType: 'consultation',
     scheduledTime: '',
@@ -76,6 +77,7 @@ function VideoCallBooking() {
       return
     }
     fetchBookings()
+    fetchPricing()
   }, [user])
 
   useEffect(() => {
@@ -111,6 +113,21 @@ function VideoCallBooking() {
       console.error(err)
     } finally {
       setLoadingBookings(false)
+    }
+  }
+
+  const fetchPricing = async () => {
+    try {
+      const res = await apiClient.get('/auth/video-call/pricing')
+      if (res.data.validate) {
+        const pricingMap = {}
+        for (const item of res.data.pricing || []) {
+          pricingMap[item.sessionType] = Number(item.effectivePriceInInr)
+        }
+        setSessionPricing((prev) => ({ ...prev, ...pricingMap }))
+      }
+    } catch (err) {
+      console.error('Error fetching pricing', err)
     }
   }
 
@@ -249,7 +266,9 @@ function VideoCallBooking() {
   }
 
   const selectedSession = sessionTypes.find((session) => session.value === formData.sessionType)
-  const estimatedAmount = getBookingAmount(formData.sessionType, formData.duration)
+  const estimatedAmount = getBookingAmount(formData.sessionType, formData.duration, sessionPricing)
+  const upcomingOrActiveBookings = bookings.filter((booking) => booking.status !== 'completed')
+  const completedBookings = bookings.filter((booking) => booking.status === 'completed')
 
   return (
     <>
@@ -358,8 +377,14 @@ function VideoCallBooking() {
                 <p>Click "Book Now" to schedule your first video call!</p>
               </div>
             ) : (
-              <div className='bookings-grid'>
-                {bookings.map((booking) => (
+              <>
+                <h3 style={{ marginBottom: '12px' }}>Upcoming / Active</h3>
+                <div className='bookings-grid'>
+                  {upcomingOrActiveBookings.length === 0 ? (
+                    <div className='brutalist-card empty-state'>
+                      <p>No active or upcoming video calls.</p>
+                    </div>
+                  ) : upcomingOrActiveBookings.map((booking) => (
                   <div key={booking.booking_id} className='brutalist-card booking-item'>
                     <div className='booking-info'>
                       <div className='booking-type'>
@@ -416,8 +441,43 @@ function VideoCallBooking() {
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+
+                <h3 style={{ marginTop: '24px', marginBottom: '12px' }}>Completed</h3>
+                <div className='bookings-grid'>
+                  {completedBookings.length === 0 ? (
+                    <div className='brutalist-card empty-state'>
+                      <p>No completed calls yet.</p>
+                    </div>
+                  ) : completedBookings.map((booking) => (
+                    <div key={booking.booking_id} className='brutalist-card booking-item'>
+                      <div className='booking-info'>
+                        <div className='booking-type'>
+                          {sessionTypes.find(s => s.value === booking.session_type)?.label || booking.session_type}
+                        </div>
+                        <div className='booking-id'>ID: {booking.booking_id}</div>
+                      </div>
+                      <div className='booking-details'>
+                        <div className='detail-row'>
+                          <span className='label'>Date & Time:</span>
+                          <span className='value'>{formatDate(booking.scheduled_time)}</span>
+                        </div>
+                        <div className='detail-row'>
+                          <span className='label'>Duration:</span>
+                          <span className='value'>{booking.duration} minutes</span>
+                        </div>
+                        <div className='detail-row'>
+                          <span className='label'>Status:</span>
+                          <span className='status-indicator' style={{ backgroundColor: getStatusColor(booking.status), border: '2px solid black' }}>
+                            {booking.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
