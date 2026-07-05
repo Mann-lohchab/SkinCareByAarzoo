@@ -1,7 +1,7 @@
-import featureImageOne from '../../../media&images/WhatsApp Unknown 2026-04-14 at 7.29.12 PM/2e0d214c5ab870f42049975ed11480b6 (1).jpg.jpeg'
-import featureImageTwo from '../../../media&images/WhatsApp Unknown 2026-04-14 at 7.29.12 PM/e7ccc217301e8dbef9ad054436d7c0f7.jpg.jpeg'
-import featureImageThree from '../../../media&images/WhatsApp Unknown 2026-04-14 at 7.29.12 PM/2ad1016a0e3767d9c311176b898b5eb9.jpg.jpeg'
-import featureImageFour from '../../../media&images/WhatsApp Unknown 2026-04-14 at 7.29.12 PM/xxxsfssdfsd.jpeg'
+import featureImageOne from '../../assets/feature1.jpeg'
+import featureImageTwo from '../../assets/feature2.jpeg'
+import featureImageThree from '../../assets/feature3.jpeg'
+import featureImageFour from '../../assets/feature4.jpeg'
 
 const features = [
   {
