@@ -1,12 +1,10 @@
 import { Link } from 'react-router-dom'
+import heroImage from '../../assets/hero.jpg'
 
 const floatingHighlights = [
   'Personalized protocols',
   'Clinical approach',
 ]
-
-const heroImage =
-  'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fdam.northwell.edu%2Fasset%2Fce00e809-4429-41f5-b477-f4186b115e91%2FDrupal%2FTheWell_skincare_AS_619348721.jpg&f=1&nofb=1&ipt=fea408fe2e300b67f0b8aebebf440f3e4b73b564e752e4324897dcf0fafc7c67'
 
 export function HeroSection() {
   return (
